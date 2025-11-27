@@ -198,7 +198,7 @@ const Dashboard = () => {
                     <Menu className="h-6 w-6" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-3/4 p-0">
+                <SheetContent side="left" className="w-3/4 p-0 z-[10000]">
                   <SheetHeader className="p-4 border-b">
                     <SheetTitle>Navigation</SheetTitle>
                   </SheetHeader>
