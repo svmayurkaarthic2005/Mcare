@@ -559,25 +559,37 @@ const DoctorDashboard = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between py-6 lg:py-6">
             <div className="flex items-center gap-3">
+              <button 
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className={`lg:hidden z-50 p-2.5 rounded-lg transition-all duration-300 relative group cursor-pointer ${
+                  mobileMenuOpen 
+                    ? 'bg-primary/20 hover:bg-primary/30 active:bg-primary/40' 
+                    : 'hover:bg-accent/20 active:bg-accent/30'
+                }`} 
+                aria-label="Toggle menu"
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-nav"
+              >
+                <div className={`absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 transition-opacity duration-300 pointer-events-none ${
+                  mobileMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}></div>
+                <Menu className={`h-6 w-6 relative z-10 transition-transform duration-300 ${
+                  mobileMenuOpen ? 'rotate-90' : 'group-hover:rotate-180'
+                }`} />
+              </button>
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <button 
-                    type="button"
-                    className="lg:hidden z-50 p-2.5 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group cursor-pointer" 
-                    aria-label="Toggle menu"
-                    aria-expanded={mobileMenuOpen}
-                    aria-controls="mobile-nav"
-                  >
-                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                    <Menu className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
-                  </button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-3/4 p-0 overflow-y-auto" id="mobile-nav">
+                <SheetContent side="left" className="w-3/4 p-0 overflow-y-auto z-[10000]" id="mobile-nav">
                   <SheetHeader className="p-4 border-b sticky top-0 bg-background z-10 flex flex-row items-center justify-between">
                     <SheetTitle>Navigation</SheetTitle>
                     <SheetClose asChild>
-                      <button className="h-8 w-8 rounded-lg hover:bg-destructive/10 flex items-center justify-center transition-colors">
-                        <X className="h-5 w-5 text-destructive" />
+                      <button 
+                        type="button" 
+                        className="h-8 w-8 rounded-lg hover:bg-destructive/10 active:bg-destructive/20 flex items-center justify-center transition-all duration-200 relative group cursor-pointer"
+                        aria-label="Close menu"
+                      >
+                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-destructive/5 to-destructive/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"></div>
+                        <X className="h-5 w-5 text-destructive relative z-10 transition-transform duration-200 group-hover:rotate-90" />
                       </button>
                     </SheetClose>
                   </SheetHeader>

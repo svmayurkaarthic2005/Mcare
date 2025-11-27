@@ -274,6 +274,7 @@ const Services = () => {
           loop
           muted
           playsInline
+          preload="metadata"
           className="absolute inset-0 w-full h-full object-cover z-[-1]"
           aria-hidden="true"
         >
