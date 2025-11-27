@@ -204,7 +204,7 @@ const Dashboard = () => {
                     <Menu className="h-6 w-6" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-3/4 p-0" id="mobile-nav">
+                <SheetContent side="left" className="w-3/4 p-0 z-[10000]" id="mobile-nav">
                   <SheetHeader className="p-4 border-b">
                     <SheetTitle>Navigation</SheetTitle>
                   </SheetHeader>
