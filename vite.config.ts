@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    middlewareMode: false,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
@@ -16,11 +17,12 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    sourcemap: mode === "development" ? "inline" : false,
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ["react", "react-dom", "react-router-dom"],
+          ui: ["@radix-ui/react-dialog", "@radix-ui/react-sheet"],
         },
       },
     },
@@ -32,5 +34,14 @@ export default defineConfig(({ mode }) => ({
         drop_console: mode === "production",
       },
     },
+    chunkSizeWarningLimit: 1500,
+  },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "lucide-react",
+    ],
   },
 }));
