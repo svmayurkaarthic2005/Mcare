@@ -4,7 +4,6 @@ import { Activity, Sparkles, Pill, Clock, FileHeart, Shield, Calendar, MessageSq
 import { Link, useNavigate } from "react-router-dom";
 import { usePageTransition } from "@/App";
 import { motion } from "framer-motion";
-import { VideoBackground } from "@/components/VideoBackground";
 import serviceVideo from "@/assets/service.mp4";
 
 const Services = () => {
@@ -270,10 +269,16 @@ const Services = () => {
 
       <section className="relative min-h-[75vh] md:min-h-screen flex items-center overflow-hidden pt-16">
         {/* Video background - plays on all screen sizes */}
-        <VideoBackground 
-          src={serviceVideo}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
           className="absolute inset-0 w-full h-full object-cover z-[-1]"
-        />
+          aria-hidden="true"
+        >
+          <source src={serviceVideo} type="video/mp4" />
+        </video>
         <div className="absolute inset-0 z-[1] bg-gradient-to-b from-background/40 via-background/20 to-background/40 md:from-background/20 md:via-transparent md:to-background/20" />
         
         <div className="container relative z-10 mx-auto px-4 py-20">
