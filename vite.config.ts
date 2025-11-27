@@ -17,5 +17,20 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: mode === "development" ? "inline" : false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom"],
+        },
+      },
+    },
+    assetsInlineLimit: 4096,
+    cssCodeSplit: true,
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: mode === "production",
+      },
+    },
   },
 }));
