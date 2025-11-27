@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Menu, X } from "lucide-react";
+import { Activity, Menu } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User, Session } from "@supabase/supabase-js";
@@ -13,7 +13,7 @@ import { AvailableDoctors } from "@/components/dashboard/AvailableDoctors";
 import { PatientAppointments } from "@/components/dashboard/PatientAppointments";
 import { PatientAppointmentHistory } from "@/components/dashboard/PatientAppointmentHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
 const Dashboard = () => {
@@ -192,64 +192,28 @@ const Dashboard = () => {
         <div className="container mx-auto px-6 lg:px-8">
           <div className="relative flex items-center justify-between py-6">
             <div className="flex items-center gap-3">
-              <button 
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className={`md:hidden p-2 rounded-lg transition-all duration-300 relative cursor-pointer z-50 group ${
-                  mobileMenuOpen 
-                    ? 'bg-primary/20 hover:bg-primary/30' 
-                    : 'hover:bg-accent/20 active:bg-accent/30'
-                }`} 
-                aria-label="Toggle menu"
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile-nav"
-              >
-                <div className={`absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 transition-opacity duration-300 pointer-events-none ${
-                  mobileMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                }`}></div>
-                <Menu className={`h-6 w-6 relative z-10 transition-transform duration-300 ${
-                  mobileMenuOpen ? 'rotate-90' : 'group-hover:rotate-180'
-                }`} />
-              </button>
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetContent side="left" className="w-3/4 p-0 z-[10000]" id="mobile-nav">
-                  <SheetHeader className="p-4 border-b sticky top-0 bg-background z-10 flex flex-row items-center justify-between">
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden">
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-3/4 p-0">
+                  <SheetHeader className="p-4 border-b">
                     <SheetTitle>Navigation</SheetTitle>
-                    <SheetClose asChild>
-                      <button 
-                        type="button" 
-                        className="h-8 w-8 rounded-lg hover:bg-destructive/10 active:bg-destructive/20 flex items-center justify-center transition-all duration-200 relative group cursor-pointer"
-                        aria-label="Close menu"
-                      >
-                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-destructive/5 to-destructive/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"></div>
-                        <X className="h-5 w-5 text-destructive relative z-10 transition-transform duration-200 group-hover:rotate-90" />
-                      </button>
-                    </SheetClose>
                   </SheetHeader>
-                  <nav className="flex flex-col gap-2 p-4">
+                  <nav className="flex flex-col gap-4 p-4">
                     {navLinks.map((link) => (
                       <button
-                        type="button"
                         key={link.id}
                         onClick={() => handleMobileNavClick(link.id)}
-                        className={`group relative px-4 py-3 rounded-lg text-base font-medium transition-all text-left ${
+                        className={`px-4 py-3 rounded-lg text-base font-medium transition-all text-left ${
                           activeTab === link.id
                             ? "bg-primary text-primary-foreground shadow-md"
-                            : "text-muted-foreground hover:text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-accent/80"
                         }`}
                       >
-                        {activeTab !== link.id && (
-                          <>
-                            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 via-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <div className="absolute inset-0 rounded-lg border border-transparent group-hover:border-primary/30 transition-colors duration-300"></div>
-                          </>
-                        )}
-                        <span className="relative z-10 flex items-center gap-2">
-                          {link.label}
-                          {activeTab !== link.id && (
-                            <span className="inline-block opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1">→</span>
-                          )}
-                        </span>
+                        {link.label}
                       </button>
                     ))}
                   </nav>

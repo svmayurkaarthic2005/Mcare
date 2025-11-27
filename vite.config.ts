@@ -16,20 +16,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    sourcemap: false, // Disable source maps in build - they can cause network errors
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // Separate vendor code for better caching
-          vendor: ["react", "react-dom", "react-router-dom"],
-        },
-      },
-    },
-    // Optimize chunk sizes
-    chunkSizeWarningLimit: 2000,
-    // Use terser for minification
-    minify: "terser",
-    // Optimize CSS code splitting
-    cssCodeSplit: true,
+    sourcemap: mode === "development" ? "inline" : false,
   },
 }));
