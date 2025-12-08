@@ -4,6 +4,7 @@ import { Activity, Users, Calendar, FileText, Search, Menu, X } from "lucide-rea
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+import { useN8nChat } from "@/hooks/use-n8n-chat";
 import { recoverUserRole } from "@/lib/role-recovery";
 import { getTodayIST } from "@/lib/istTimezone";
 import { ProfileDropdown } from "@/components/dashboard/ProfileDropdown";
@@ -45,8 +46,18 @@ interface PatientData {
   medical_records?: any[];
 }
 
-const DoctorDashboard = () => {
+interface DoctorDashboardProps {
+  showChat?: boolean;
+}
+
+const DoctorDashboard = ({ showChat = false }: DoctorDashboardProps) => {
   const navigate = useNavigate();
+  
+  // Initialize n8n chat if showChat is true
+  if (showChat) {
+    useN8nChat();
+  }
+  
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [patients, setPatients] = useState<PatientData[]>([]);

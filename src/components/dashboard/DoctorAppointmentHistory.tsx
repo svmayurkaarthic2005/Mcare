@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MessageSquare, Star, Calendar, PlusCircle } from "lucide-react";
+import { MessageSquare, Star, Calendar, PlusCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppointmentFeedbackDialog } from "./AppointmentFeedbackDialog";
 import { PrescriptionUploadDialog } from "./PrescriptionUploadDialog";
@@ -314,45 +314,44 @@ export const DoctorAppointmentHistory = ({
   return (
     <>
       <Card className="overflow-hidden bg-gradient-to-br from-card to-card/50 border-primary/10 shadow-[var(--shadow-card)]">
-        <div className="p-6 border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-md">
-              <Calendar className="h-5 w-5 text-primary-foreground" />
+        <div className="p-3 sm:p-4 border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 sm:h-10 w-8 sm:w-10 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-md">
+              <Calendar className="h-4 sm:h-5 w-4 sm:w-5 text-primary-foreground" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Appointment History</h3>
-              <p className="text-sm text-muted-foreground">Past consultations and feedback</p>
+              <h3 className="text-base sm:text-lg font-semibold">Appointment History</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">Past consultations and feedback</p>
             </div>
           </div>
         </div>
         
         {appointments.length === 0 ? (
-          <div className="text-center py-12 px-6">
-            <Calendar className="h-16 w-16 text-muted-foreground/50 mx-auto mb-3" />
-            <p className="text-muted-foreground font-medium">No appointment history</p>
-            <p className="text-sm text-muted-foreground mt-1">Your completed appointments will appear here</p>
+          <div className="text-center py-8 sm:py-12 px-3 sm:px-6">
+            <Calendar className="h-12 sm:h-16 w-12 sm:w-16 text-muted-foreground/50 mx-auto mb-2 sm:mb-3" />
+            <p className="text-muted-foreground font-medium text-sm sm:text-base">No appointment history</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Your completed appointments will appear here</p>
           </div>
         ) : (
           <ScrollArea className="h-[600px] w-full">
-            <div className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+            <div className="space-y-2 sm:space-y-2.5 p-2 sm:p-3">
               {appointments.map((appointment) => (
-                <Card key={appointment.id} className="group p-3 sm:p-4 border-primary/10 hover:shadow-[var(--shadow-glow)] hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-card to-card/80">
-                  <div className="space-y-2 sm:space-y-3">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                <Card key={appointment.id} className="group p-2 sm:p-2.5 border-primary/10 hover:shadow-[var(--shadow-glow)] hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-card to-card/80">
+                  <div className="space-y-1 sm:space-y-1.5">
+                    <div className="flex flex-col gap-1.5 sm:gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm sm:text-base group-hover:text-primary transition-colors truncate">{appointment.patient_name}</p>
-                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{appointment.patient_email}</p>
+                          <p className="font-medium text-xs sm:text-sm group-hover:text-primary transition-colors truncate">{appointment.patient_name}</p>
+                          <p className="text-xs text-muted-foreground truncate hidden sm:block">{appointment.patient_email}</p>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           {getStatusBadge(appointment.status, appointment.notes)}
                         </div>
                       </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <div className="flex gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                          <span>{new Date(appointment.appointment_date).toLocaleDateString()}</span>
-                          <span className="hidden sm:inline">{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          <span className="sm:hidden">{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <div className="flex gap-1 sm:gap-2 text-xs text-muted-foreground">
+                          <span className="truncate">{new Date(appointment.appointment_date).toLocaleDateString()}</span>
+                          <span className="text-xs text-muted-foreground">{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         <Button
                           size="sm"
@@ -369,45 +368,35 @@ export const DoctorAppointmentHistory = ({
                               isEmergencyBooking: appointment.is_emergency_booking || false,
                             })
                           }
-                          className="border-primary/20 hover:bg-primary/10 h-8 text-xs sm:ml-auto"
+                          className="border-primary/20 hover:bg-primary/10 h-7 w-7 p-0 sm:h-8 sm:w-8"
                           title={hasAppointmentPassed(appointment.appointment_date) ? "Add or manage prescription for this appointment" : "Prescription can only be added after appointment time"}
                         >
-                          <PlusCircle className="h-3 w-3 mr-1" />
-                          <span className="hidden sm:inline">
-                            {prescriptions[appointment.id] && prescriptions[appointment.id].length > 0
-                              ? `Add Prescription (${prescriptions[appointment.id].length})`
-                              : "Add Prescription"}
-                          </span>
-                          <span className="sm:hidden">
-                            {prescriptions[appointment.id] && prescriptions[appointment.id].length > 0
-                              ? `Prescription (${prescriptions[appointment.id].length})`
-                              : "Prescription"}
-                          </span>
+                          <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </div>
                     
                     {appointment.reason && (
-                      <p className="text-xs sm:text-sm bg-muted/30 p-2 rounded-lg"><span className="font-medium">Reason:</span> {appointment.reason}</p>
+                      <p className="text-xs bg-muted/30 p-1 rounded break-words"><span className="font-medium">Reason:</span> {appointment.reason}</p>
                     )}
                     {appointment.notes && (
-                      <p className="text-xs sm:text-sm bg-muted/30 p-2 rounded-lg"><span className="font-medium">Notes:</span> {appointment.notes}</p>
+                      <p className="text-xs bg-muted/30 p-1 rounded break-words"><span className="font-medium">Notes:</span> {appointment.notes}</p>
                     )}
 
                     {canProvideFeedback(appointment) && (
-                      <div className="pt-2 sm:pt-3 border-t border-primary/10 space-y-2 sm:space-y-3">
+                      <div className="pt-1 sm:pt-1.5 border-t border-primary/10 space-y-1 sm:space-y-1.5">
                         {feedbacks[appointment.id]?.doctor_feedback ? (
                           <div className="space-y-1 sm:space-y-2">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                              <div className="flex items-center gap-2">
-                                <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                                <span className="text-xs sm:text-sm font-medium">Your Feedback</span>
-                              </div>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-1">
                               <div className="flex items-center gap-1">
+                                <MessageSquare className="h-3 w-3 text-primary flex-shrink-0" />
+                                <span className="text-xs font-medium">Your Feedback</span>
+                              </div>
+                              <div className="flex items-center gap-0.5">
                                 {Array.from({ length: 5 }).map((_, i) => (
                                   <Star
                                     key={i}
-                                    className={`h-2.5 w-2.5 sm:h-3 sm:w-3 ${
+                                    className={`h-2.5 w-2.5 ${
                                       i < (feedbacks[appointment.id]?.doctor_rating || 0)
                                         ? "fill-yellow-400 text-yellow-400"
                                         : "text-muted-foreground"
@@ -416,7 +405,7 @@ export const DoctorAppointmentHistory = ({
                                 ))}
                               </div>
                             </div>
-                            <p className="text-xs sm:text-sm text-muted-foreground bg-primary/5 p-2 sm:p-3 rounded-lg">
+                            <p className="text-xs text-muted-foreground bg-primary/5 p-1 sm:p-1.5 rounded break-words">
                               {feedbacks[appointment.id]?.doctor_feedback}
                             </p>
                             <Button

@@ -261,8 +261,8 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+          <Route path="/dashboard" element={<Dashboard showChat={true} />} />
+          <Route path="/doctor-dashboard" element={<DoctorDashboard showChat={true} />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/services" element={<Services />} />

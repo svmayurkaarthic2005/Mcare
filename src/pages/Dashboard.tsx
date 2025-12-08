@@ -4,6 +4,7 @@ import { Activity, Menu, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User, Session } from "@supabase/supabase-js";
+import { useN8nChat } from "@/hooks/use-n8n-chat";
 import { ProfileDropdown } from "@/components/dashboard/ProfileDropdown";
 import Notifications from "@/components/dashboard/Notifications";
 import { HealthTimeline } from "@/components/dashboard/HealthTimeline";
@@ -17,8 +18,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
-const Dashboard = () => {
+interface DashboardProps {
+  showChat?: boolean;
+}
+
+const Dashboard = ({ showChat = false }: DashboardProps) => {
   const navigate = useNavigate();
+  
+  // Initialize n8n chat if showChat is true
+  if (showChat) {
+    useN8nChat();
+  }
+  
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);

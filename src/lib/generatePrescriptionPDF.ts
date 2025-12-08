@@ -92,12 +92,13 @@ export const generatePrescriptionPDF = async (
 
     // PDF options
     const options = {
-      margin: 10,
+      margin: [10, 10, 20, 10],
       filename: `prescription-${prescription.patientName}-${new Date().getTime()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      pagebreak: { mode: 'avoid-all' },
+      logging: false,
     };
 
     // Generate and download PDF
@@ -112,36 +113,17 @@ export const generatePrescriptionPDF = async (
 };
 
 /**
- * Create MCare Logo as SVG
- */
-const createMCareLogo = (): string => {
-  return `
-    <svg width="60" height="60" viewBox="0 0 60 60" style="display: inline-block; vertical-align: middle;">
-      <!-- Background Circle -->
-      <circle cx="30" cy="30" r="28" fill="#1976d2" opacity="0.1"/>
-      <!-- Heart Shape -->
-      <path d="M30 50 C15 38, 8 28, 8 20 C8 12, 14 8, 20 8 C24 8, 27 11, 30 14 C33 11, 36 8, 40 8 C46 8, 52 12, 52 20 C52 28, 45 38, 30 50 Z" fill="#1976d2" stroke="#1976d2" stroke-width="1"/>
-      <!-- Medical Cross in the middle -->
-      <rect x="26" y="18" width="8" height="20" fill="white" rx="2"/>
-      <rect x="18" y="26" width="24" height="8" fill="white" rx="2"/>
-    </svg>
-  `;
-};
-
-/**
- * Create formatted HTML for prescription
+ * Create formatted HTML for prescription following MCare template
  */
 const createPrescriptionHTML = (prescription: PrescriptionData, qrCodeUrl?: string): string => {
   const medicinesRows = prescription.medicines
-    .map((med, idx) => {
+    .map((med) => {
       return `
-        <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f9fafb'};">
-          <td style="padding: 14px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1976d2; font-size: 13px;">${idx + 1}</td>
-          <td style="padding: 14px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #111827; font-size: 13px;">${med.medicine_name}</td>
-          <td style="padding: 14px; text-align: center; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${med.dosage}</td>
-          <td style="padding: 14px; text-align: center; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${med.frequency}</td>
-          <td style="padding: 14px; text-align: center; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${med.duration}</td>
-          <td style="padding: 14px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">${med.notes || '-'}</td>
+        <tr>
+          <td>${med.medicine_name}</td>
+          <td>${med.dosage}</td>
+          <td>${med.frequency}</td>
+          <td>${med.duration}</td>
         </tr>
       `;
     })
@@ -149,151 +131,178 @@ const createPrescriptionHTML = (prescription: PrescriptionData, qrCodeUrl?: stri
 
   const createdDate = new Date(prescription.createdAt);
   const formattedDate = createdDate.toLocaleDateString('en-US', {
-    weekday: 'long',
     year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
-  const formattedTime = createdDate.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  const mcareLogo = createMCareLogo();
 
   return `
-    <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #111827; line-height: 1.6; max-width: 900px; margin: 0 auto; background-color: #ffffff;">
-      <!-- Premium Header with Logo -->
-      <div style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); padding: 25px 20px; margin-bottom: 0; border-radius: 8px 8px 0 0; box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);">
-        <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
-          ${mcareLogo}
-          <div style="text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.5px;">MCare</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 4px 0 0 0; font-size: 12px; font-weight: 500; letter-spacing: 0.5px;">MEDICAL CARE SYSTEM</p>
-          </div>
-        </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Mcare Prescription</title>
+      <style>
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          margin: 40px;
+          margin-bottom: 60px;
+          line-height: 1.6;
+          color: #000000;
+          background-color: #ffffff;
+        }
+
+        /* MCare Header */
+        .header {
+          text-align: center;
+          margin-bottom: 10px;
+        }
+
+        .header h1 {
+          font-size: 30px;
+          margin: 0;
+          padding: 0;
+          letter-spacing: 1px;
+          color: #000000;
+        }
+
+        hr {
+          border: none;
+          border-top: 2px solid #444;
+          margin: 10px 0 30px 0;
+        }
+
+        /* Section titles */
+        h2 {
+          font-size: 20px;
+          margin-bottom: 5px;
+          border-bottom: 1px solid #aaa;
+          padding-bottom: 3px;
+          color: #000000;
+        }
+
+        /* Data table formatting */
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 25px;
+        }
+
+        table td {
+          padding: 6px 4px;
+          vertical-align: top;
+          color: #000000;
+        }
+
+        table strong {
+          color: #000000;
+          font-weight: bold;
+        }
+
+        .med-table th, .med-table td {
+          border: 1px solid #888;
+          padding: 8px;
+          color: #000000;
+        }
+
+        .med-table th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+          color: #000000;
+        }
+
+        /* Signature */
+        .signature-block {
+          margin-top: 50px;
+          text-align: right;
+        }
+
+        .signature-img {
+          height: 80px;
+          width: auto;
+          margin-bottom: 5px;
+        }
+
+        .footer {
+          text-align: center;
+          margin-top: 40px;
+          margin-bottom: 20px;
+          padding: 15px;
+          font-size: 11px;
+          color: #333333;
+          line-height: 1.4;
+        }
+      </style>
+    </head>
+
+    <body>
+
+      <div class="header">
+        <h1>Mcare</h1>
+        <hr>
       </div>
 
-      <!-- Prescription Title Section -->
-      <div style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); padding: 20px; border-bottom: 3px solid #1976d2; text-align: center;">
-        <h2 style="color: #1976d2; margin: 0 0 5px 0; font-size: 28px; font-weight: 700;">MEDICAL PRESCRIPTION</h2>
-        <p style="color: #6b7280; margin: 0; font-size: 13px; font-weight: 500;">Authorized Medical Document</p>
-      </div>
+      <!-- Doctor Section -->
+      <h2>Doctor Details</h2>
+      <table>
+        <tr><td><strong>Name:</strong></td><td>${prescription.doctorName || 'N/A'}</td></tr>
+        <tr><td><strong>Specialization:</strong></td><td>${prescription.doctorSpecialization || 'N/A'}</td></tr>
+        <tr><td><strong>License No:</strong></td><td>${prescription.doctorLicense || 'N/A'}</td></tr>
+      </table>
 
-      <!-- Two Column Info Section -->
-      <div style="display: flex; gap: 20px; padding: 25px 20px; margin-bottom: 0;">
-        <!-- Doctor Section -->
-        <div style="flex: 1;">
-          <div style="background: linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%); padding: 18px; border-radius: 8px; border-left: 5px solid #1976d2; box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-              <span style="font-size: 20px;">👨‍⚕️</span>
-              <p style="margin: 0; font-weight: 700; color: #1976d2; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Doctor Information</p>
-            </div>
-            <div style="border-top: 1px solid rgba(25, 118, 210, 0.2); padding-top: 12px;">
-              <p style="margin: 6px 0; font-size: 13px;"><span style="color: #6b7280; font-weight: 600;">Name:</span> <span style="color: #111827; font-weight: 600;">${prescription.doctorName ? `Dr. ${prescription.doctorName}` : 'N/A'}</span></p>
-              <p style="margin: 6px 0; font-size: 13px;"><span style="color: #6b7280; font-weight: 600;">License:</span> <span style="color: #111827; font-family: 'Courier New', monospace;">${prescription.doctorLicense || 'N/A'}</span></p>
-              <p style="margin: 6px 0; font-size: 13px;"><span style="color: #6b7280; font-weight: 600;">Specialization:</span> <span style="color: #111827;">${prescription.doctorSpecialization || 'General Practice'}</span></p>
-            </div>
-          </div>
-        </div>
+      <!-- Patient Section -->
+      <h2>Patient Details</h2>
+      <table>
+        <tr><td><strong>Name:</strong></td><td>${prescription.patientName}</td></tr>
+        <tr><td><strong>Email:</strong></td><td>${prescription.patientEmail}</td></tr>
+        ${prescription.patientTemperature ? `<tr><td><strong>Temperature:</strong></td><td>${prescription.patientTemperature}°F</td></tr>` : ''}
+      </table>
 
-        <!-- Patient Section -->
-        <div style="flex: 1;">
-          <div style="background: linear-gradient(135deg, #f0fdf4 0%, #e6f9eb 100%); padding: 18px; border-radius: 8px; border-left: 5px solid #4caf50; box-shadow: 0 2px 8px rgba(76, 175, 80, 0.08);">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-              <span style="font-size: 20px;">👤</span>
-              <p style="margin: 0; font-weight: 700; color: #4caf50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Patient Information</p>
-            </div>
-            <div style="border-top: 1px solid rgba(76, 175, 80, 0.2); padding-top: 12px;">
-              <p style="margin: 6px 0; font-size: 13px;"><span style="color: #6b7280; font-weight: 600;">Name:</span> <span style="color: #111827; font-weight: 600;">${prescription.patientName}</span></p>
-              <p style="margin: 6px 0; font-size: 13px;"><span style="color: #6b7280; font-weight: 600;">Email:</span> <span style="color: #111827; word-break: break-all;">${prescription.patientEmail}</span></p>
-              ${prescription.patientTemperature ? `<p style="margin: 6px 0; font-size: 13px;"><span style="color: #6b7280; font-weight: 600;">Temperature:</span> <span style="color: #d97706; font-weight: 600;">${prescription.patientTemperature}°F</span></p>` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Appointment Info -->
+      <h2>Consultation Info</h2>
+      <table>
+        <tr><td><strong>Appointment ID:</strong></td><td>${prescription.id}</td></tr>
+      </table>
 
-      <!-- Date & Time Section -->
-      <div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe8cc 100%); padding: 15px 20px; margin: 0 20px; border-radius: 8px; border-left: 5px solid #ff9800; box-shadow: 0 2px 8px rgba(255, 152, 0, 0.08); margin-bottom: 25px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 18px;">📅</span>
-          <div>
-            <p style="margin: 0 0 4px 0; font-weight: 700; color: #ff9800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Date & Time</p>
-            <p style="margin: 0; font-size: 13px; color: #333; font-weight: 500;">${formattedDate} | ${formattedTime}</p>
-          </div>
-        </div>
-      </div>
+      <!-- Medicines -->
+      <h2>Prescribed Medicines</h2>
+      <table class="med-table">
+        <thead>
+          <tr>
+            <th>Medicine</th>
+            <th>Dosage</th>
+            <th>Frequency</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${medicinesRows}
+        </tbody>
+      </table>
 
-      <!-- Medicines Table -->
-      <div style="padding: 0 20px; margin-bottom: 25px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
-          <span style="font-size: 20px;">💊</span>
-          <h3 style="color: #1976d2; font-size: 16px; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Prescribed Medicines</h3>
-        </div>
-        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
-          <thead>
-            <tr style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); color: white;">
-              <th style="padding: 14px; text-align: center; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; width: 5%;">#</th>
-              <th style="padding: 14px; text-align: left; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Medicine Name</th>
-              <th style="padding: 14px; text-align: center; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Dosage</th>
-              <th style="padding: 14px; text-align: center; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Frequency</th>
-              <th style="padding: 14px; text-align: center; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Duration</th>
-              <th style="padding: 14px; text-align: left; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${medicinesRows}
-          </tbody>
-        </table>
-      </div>
+      <!-- Notes -->
+      <h2 style="margin-top: 20px;">Doctor Notes</h2>
+      <p style="color: #000000;">${prescription.generalNotes || 'N/A'}</p>
 
       <!-- General Instructions -->
-      ${
-        prescription.generalNotes
-          ? `
-        <div style="padding: 0 20px; margin-bottom: 25px;">
-          <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 18px; border-radius: 8px; border-left: 5px solid #fbbf24; box-shadow: 0 2px 8px rgba(251, 191, 36, 0.08);">
-            <div style="display: flex; align-items: flex-start; gap: 12px;">
-              <span style="font-size: 20px; line-height: 1.4;">📋</span>
-              <div style="flex: 1;">
-                <p style="margin: 0 0 8px 0; font-weight: 700; color: #92400e; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">General Instructions</p>
-                <p style="margin: 0; font-size: 13px; color: #333; line-height: 1.6;">${prescription.generalNotes}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      `
-          : ''
-      }
+      <h2 style="margin-top: 20px;">General Instructions</h2>
+      <p style="color: #000000;">Please follow the prescribed medicines as per the dosage and frequency mentioned above. If you experience any adverse effects, please consult your doctor immediately.</p>
 
       <!-- QR Code Section -->
-      ${
-        qrCodeUrl
-          ? `
-        <div style="padding: 0 20px; margin-bottom: 25px;">
-          <div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 25px; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #d1d5db;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px;">
-              <span style="font-size: 20px;">📱</span>
-              <div style="text-align: left;">
-                <p style="margin: 0; font-weight: 700; color: #111827; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Share Prescription</p>
-                <p style="margin: 2px 0 0 0; font-size: 12px; color: #6b7280;">Scan QR code to share details</p>
-              </div>
-            </div>
-            <img src="${qrCodeUrl}" alt="Prescription QR Code" style="width: 180px; height: 180px; border: 4px solid #1976d2; border-radius: 12px; padding: 10px; background-color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-          </div>
+      <h2 style="margin-top: 20px;">Prescription QR Code</h2>
+      ${qrCodeUrl ? `
+        <div style="text-align: center; margin-bottom: 5px;">
+          <img src="${qrCodeUrl}" alt="Prescription QR Code" style="width: 120px; height: 120px; border: 2px solid #333;">
+          <p style="font-size: 11px; color: #666; margin: 5px 0 0 0;">Scan to share prescription details</p>
         </div>
-      `
-          : ''
-      }
+      ` : `<p style="color: #000000;">N/A</p>`}
 
-      <!-- Professional Footer -->
-      <div style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); padding: 20px; margin-top: 25px; border-radius: 0 0 8px 8px; color: white; text-align: center; box-shadow: 0 4px 12px rgba(25, 118, 210, 0.15);">
-        <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 12px;">This is an electronically generated prescription from MCare Medical Care System.</p>
-        <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-top: 10px;">
-          <p style="margin: 3px 0; font-size: 11px; opacity: 0.9;">Prescription ID: <strong>${prescription.id}</strong> | Generated: ${new Date().toLocaleString()}</p>
-        </div>
+      <div class="footer">
+        This document is digitally generated by Mcare and does not require a physical signature.
       </div>
-    </div>
+
+    </body>
+    </html>
   `;
 };
 

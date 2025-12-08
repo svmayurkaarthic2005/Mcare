@@ -76,6 +76,24 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
     if (!patientId) return;
 
     let pollingInterval: number | undefined;
+    let refreshTimeout: NodeJS.Timeout | undefined;
+    let lastFetchTime = 0;
+    const MIN_REFRESH_INTERVAL = 2000; // Minimum 2 seconds between refreshes
+
+    const debouncedFetch = () => {
+      const now = Date.now();
+      if (now - lastFetchTime < MIN_REFRESH_INTERVAL) {
+        // Refresh too soon, debounce it
+        if (refreshTimeout) clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          lastFetchTime = Date.now();
+          fetchAppointmentHistory();
+        }, MIN_REFRESH_INTERVAL - (now - lastFetchTime));
+        return;
+      }
+      lastFetchTime = now;
+      fetchAppointmentHistory();
+    };
 
     try {
       const appointmentsChannel = supabase
@@ -89,7 +107,7 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
             filter: `patient_id=eq.${patientId}`
           },
           () => {
-            fetchAppointmentHistory();
+            debouncedFetch();
           }
         )
         .subscribe((status) => {
@@ -101,11 +119,11 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
             }
           } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
             console.warn('Realtime subscription unavailable for appointment history, falling back to polling');
-            // Start polling every 10 seconds
+            // Start polling every 30 seconds (instead of 10)
             if (!pollingInterval) {
               pollingInterval = window.setInterval(() => {
-                fetchAppointmentHistory();
-              }, 10000) as unknown as number;
+                debouncedFetch();
+              }, 30000) as unknown as number;
             }
           }
         });
@@ -128,13 +146,7 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
           if (status === 'SUBSCRIBED') {
             // Realtime is working
           } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.warn('Realtime subscription unavailable for feedback updates, falling back to polling');
-            // Start polling every 10 seconds
-            if (!pollingInterval) {
-              pollingInterval = window.setInterval(() => {
-                fetchFeedbacks();
-              }, 10000) as unknown as number;
-            }
+            console.warn('Realtime subscription unavailable for feedback updates');
           }
         });
 
@@ -151,7 +163,7 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
             filter: `patient_id=eq.${patientId}`
           },
           () => {
-            fetchAppointmentHistory();
+            debouncedFetch();
           }
         )
         .subscribe((status) => {
@@ -185,6 +197,9 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
         if (pollingInterval) {
           clearInterval(pollingInterval);
         }
+        if (refreshTimeout) {
+          clearTimeout(refreshTimeout);
+        }
         try {
           supabase.removeChannel(appointmentsChannel);
           supabase.removeChannel(feedbackChannel);
@@ -196,15 +211,19 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
       };
     } catch (error) {
       console.error('Failed to set up realtime subscriptions, using polling:', error);
-      // Start polling as fallback
+      // Start polling as fallback (30 seconds)
       pollingInterval = window.setInterval(() => {
         fetchAppointmentHistory();
         fetchFeedbacks();
         fetchPrescriptions();
-      }, 10000) as unknown as number;
+      }, 30000) as unknown as number;
+      
       return () => {
         if (pollingInterval) {
           clearInterval(pollingInterval);
+        }
+        if (refreshTimeout) {
+          clearTimeout(refreshTimeout);
         }
       };
     }
@@ -572,92 +591,90 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
   return (
     <>
       <Card className="overflow-hidden bg-gradient-to-br from-card to-card/50 border-primary/10 shadow-[var(--shadow-card)]">
-        <div className="p-6 border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-md">
-              <Calendar className="h-5 w-5 text-primary-foreground" />
+        <div className="p-3 sm:p-6 border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 sm:h-10 w-8 sm:w-10 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-md">
+              <Calendar className="h-4 sm:h-5 w-4 sm:w-5 text-primary-foreground" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold">Appointment History</h3>
-              <p className="text-sm text-muted-foreground">Your past consultations and feedback</p>
+              <h3 className="text-lg sm:text-xl font-semibold">Appointment History</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">Your past consultations and feedback</p>
             </div>
           </div>
         </div>
         
         {appointments.length === 0 ? (
-          <div className="text-center py-12 px-6">
-            <Calendar className="h-16 w-16 text-muted-foreground/50 mx-auto mb-3" />
-            <p className="text-muted-foreground font-medium">No previous appointments</p>
-            <p className="text-sm text-muted-foreground mt-1">Your appointment history will appear here</p>
+          <div className="text-center py-8 sm:py-12 px-3 sm:px-6">
+            <Calendar className="h-12 sm:h-16 w-12 sm:w-16 text-muted-foreground/50 mx-auto mb-2 sm:mb-3" />
+            <p className="text-muted-foreground font-medium text-sm sm:text-base">No previous appointments</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Your appointment history will appear here</p>
           </div>
         ) : (
-          <ScrollArea className="h-[600px] p-6">
-            <div className="space-y-4">
+          <ScrollArea className="h-[600px] p-2 sm:p-3">
+            <div className="space-y-2">
               {appointments.map((appointment) => (
                 <Card
                   key={appointment.id}
-                  className="group p-4 border-primary/10 hover:shadow-[var(--shadow-glow)] hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-card to-card/80"
+                  className="group p-1.5 sm:p-2 border-primary/10 hover:shadow-[var(--shadow-glow)] hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-card to-card/80 mb-1.5 sm:mb-2"
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {/* Header with doctor name and status */}
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium group-hover:text-primary transition-colors">{appointment.doctor_name}</p>
+                        <div className="flex items-center gap-0.5 flex-wrap">
+                          <p className="text-xs sm:text-sm font-medium group-hover:text-primary transition-colors truncate">{appointment.doctor_name}</p>
                           {(appointment.isEmergency || appointment.isEmergencyBooking) && appointment.urgency_level && (
-                            <span>{getUrgencyBadge(appointment.urgency_level)}</span>
+                            <span className="flex-shrink-0">{getUrgencyBadge(appointment.urgency_level)}</span>
                           )}
                         </div>
-                        <div className="flex flex-col md:flex-row md:gap-4 gap-1 mt-2 text-sm text-muted-foreground">
+                        <div className="flex flex-col sm:flex-row sm:gap-2 gap-0 mt-0.5 text-xs text-muted-foreground">
                           <span>{new Date(appointment.appointment_date).toLocaleDateString()}</span>
-                          <span>{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="block sm:inline text-xs text-muted-foreground">{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
-                      <div className="md:text-right">{getStatusBadge(appointment.status)}</div>
+                      <div className="flex-shrink-0 text-right mt-1 sm:mt-0">{getStatusBadge(appointment.status)}</div>
                     </div>
 
                     {appointment.reason && (
-                      <p className="text-sm bg-muted/30 p-2 rounded-lg"><span className="font-medium">Reason:</span> {appointment.reason}</p>
+                      <p className="text-xs bg-muted/30 p-1 sm:p-1.5 rounded break-words"><span className="font-medium">Reason:</span> {appointment.reason}</p>
                     )}
                     {appointment.notes && (
-                      <p className="text-sm bg-muted/30 p-2 rounded-lg"><span className="font-medium">Notes:</span> {appointment.notes}</p>
+                      <p className="text-xs bg-muted/30 p-1 sm:p-1.5 rounded break-words"><span className="font-medium">Notes:</span> {appointment.notes}</p>
                     )}
 
                     {/* Prescriptions Section */}
                     {prescriptions[appointment.id]?.length ? (
-                      <div className="space-y-2 bg-primary/5 p-3 rounded-lg border border-primary/10">
-                        <div className="flex items-center gap-2">
-                          <Pill className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium">
+                      <div className="space-y-0.5 sm:space-y-1 bg-primary/5 p-1.5 sm:p-2 rounded border border-primary/10 overflow-hidden">
+                        <div className="flex items-center gap-1">
+                          <Pill className="h-3 w-3 text-primary flex-shrink-0" />
+                          <span className="text-xs font-medium truncate">
                             Prescriptions ({prescriptions[appointment.id].reduce((total, rx) => total + rx.medicines.length, 0)} medicine{prescriptions[appointment.id].reduce((total, rx) => total + rx.medicines.length, 0) !== 1 ? 's' : ''})
                           </span>
                         </div>
-                        <div className="space-y-2">
-                          {prescriptions[appointment.id].map((rx, rxIdx) => (
-                            <div key={rx.id} className="bg-background/50 p-2.5 rounded-lg space-y-1.5">
-                              <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-xs text-muted-foreground mb-1">
-                                    Prescription {rxIdx + 1} ({rx.medicines.length} medicine{rx.medicines.length !== 1 ? 's' : ''})
-                                  </p>
-                                  {rx.medicines.map((med, medIdx) => (
-                                    <div key={med.id} className="ml-2 mb-1">
-                                      <p className="font-medium text-sm">{medIdx + 1}. {med.medicine_name}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {med.dosage} • {med.frequency}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        Duration: {med.duration}
-                                      </p>
-                                      {med.notes && (
-                                        <p className="text-xs text-muted-foreground italic">
-                                          Note: {med.notes}
+                        <ScrollArea className="w-full h-auto max-h-64 rounded-lg border border-border/40">
+                          <div className="space-y-1.5 p-2">
+                            {prescriptions[appointment.id].map((rx, rxIdx) => (
+                              <div key={rx.id} className="bg-background/50 p-1.5 rounded space-y-1">
+                                <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-xs text-muted-foreground">
+                                      Rx {rxIdx + 1} ({rx.medicines.length}M)
+                                    </p>
+                                    {rx.medicines.map((med, medIdx) => (
+                                      <div key={med.id} className="ml-1 text-xs">
+                                        <p className="font-medium text-xs">{medIdx + 1}. {med.medicine_name}</p>
+                                        <p className="text-xs text-muted-foreground leading-none">
+                                          {med.dosage} • {med.frequency} • {med.duration}
                                         </p>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                                <div className="flex gap-1 flex-shrink-0">
+                                        {med.notes && (
+                                          <p className="text-xs text-muted-foreground italic">
+                                            {med.notes}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-0.5 flex-shrink-0">
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -684,9 +701,9 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                                       }
                                     }}
                                     title="Download prescription as PDF with QR code"
-                                    className="h-8 w-8 p-0"
+                                    className="h-7 w-7 p-0"
                                   >
-                                    <Download className="h-4 w-4" />
+                                    <Download className="h-3 w-3" />
                                   </Button>
                                   {rx.file_url && (
                                     <Button
@@ -694,34 +711,35 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                                       variant="ghost"
                                       onClick={() => downloadPrescription(rx)}
                                       title="Download uploaded prescription file"
-                                      className="h-8 w-8 p-0"
+                                      className="h-7 w-7 p-0"
                                     >
-                                      <Pill className="h-4 w-4" />
+                                      <Pill className="h-3 w-3" />
                                     </Button>
                                   )}
                                 </div>
                               </div>
                               {rx.notes && (
-                                <p className="text-xs text-muted-foreground italic bg-background/30 p-1 rounded">
-                                  General Instructions: {rx.notes}
+                                <p className="text-xs text-muted-foreground italic bg-background/30 p-0.5 rounded leading-tight">
+                                  {rx.notes}
                                 </p>
                               )}
                             </div>
                           ))}
-                        </div>
+                          </div>
+                        </ScrollArea>
                       </div>
                     ) : null}
 
                     {canProvideFeedback(appointment) && (
-                      <div className="pt-3 border-t border-primary/10 space-y-3">
+                      <div className="pt-1.5 sm:pt-2 border-t border-primary/10 space-y-1.5 sm:space-y-2">
                         {feedbacks[appointment.id]?.patient_feedback ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <MessageSquare className="h-4 w-4 text-primary" />
-                                <span className="text-sm font-medium">Your Feedback</span>
-                              </div>
+                          <div className="space-y-0.5 sm:space-y-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                               <div className="flex items-center gap-1">
+                                <MessageSquare className="h-3 w-3 text-primary flex-shrink-0" />
+                                <span className="text-xs font-medium">Your Feedback</span>
+                              </div>
+                              <div className="flex items-center gap-0.5">
                                 {Array.from({ length: 5 }).map((_, i) => (
                                   <Star
                                     key={i}
@@ -734,12 +752,13 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                                 ))}
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground bg-primary/5 p-3 rounded-lg">
+                            <p className="text-xs text-muted-foreground bg-primary/5 p-1 sm:p-1.5 rounded break-words">
                               {feedbacks[appointment.id]?.patient_feedback}
                             </p>
                             <Button
                               size="sm"
                               variant="outline"
+                              className="w-full sm:w-auto text-xs h-8"
                               onClick={() =>
                                 setFeedbackDialog({
                                   open: true,
@@ -766,16 +785,16 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                             }
                             className="bg-gradient-to-r from-primary to-primary-light hover:shadow-md transition-all"
                           >
-                            <MessageSquare className="h-4 w-4 mr-2" />
+                            <MessageSquare className="h-3 w-3 mr-1" />
                             Provide Feedback
                           </Button>
                         )}
 
                         {feedbacks[appointment.id]?.doctor_feedback && (
-                          <div className="space-y-2 bg-accent/5 p-3 rounded-lg border border-accent/20">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">Doctor's Feedback</span>
-                              <div className="flex items-center gap-1">
+                          <div className="space-y-0.5 sm:space-y-1 bg-accent/5 p-1 sm:p-1.5 rounded border border-accent/20">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                              <span className="text-xs font-medium">Doctor's Feedback</span>
+                              <div className="flex items-center gap-0.5">
                                 {Array.from({ length: 5 }).map((_, i) => (
                                   <Star
                                     key={i}
@@ -788,7 +807,7 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                                 ))}
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs text-muted-foreground break-words">
                               {feedbacks[appointment.id]?.doctor_feedback}
                             </p>
                           </div>
