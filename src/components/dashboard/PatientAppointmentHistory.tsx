@@ -63,9 +63,14 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
   } | null>(null);
   
   const isMountedRef = useRef(true);
+  const renderCountRef = useRef(0);
+
+  // DEBUG: Log every render
+  console.log(`[PatientAppointmentHistory] Render #${++renderCountRef.current} with patientId=${patientId}`);
 
   // Memoized fetch functions to prevent recreation on every render
   const fetchPatientInfo = useCallback(async () => {
+    console.log(`[fetchPatientInfo] Called (isMounted=${isMountedRef.current})`);
     try {
       const { data, error } = await (supabase as any)
         .from("profiles")

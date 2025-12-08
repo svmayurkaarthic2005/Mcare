@@ -53,10 +53,8 @@ export const Notifications = ({ userId }: { userId: string }) => {
 
     fetchNotifications();
 
-    // Realtime subscription for notifications with polling fallback
+    // Realtime subscription for notifications - NO POLLING to prevent cascade re-renders
     try {
-      let pollingInterval: number | undefined;
-
       const channel = supabase
         .channel(`notifications-user-${userId}`)
         .on(
@@ -79,20 +77,11 @@ export const Notifications = ({ userId }: { userId: string }) => {
         .subscribe((status) => {
           // status values: 'SUBSCRIBED', 'CHANNEL_ERROR', 'CLOSED', etc.
           if (status === "SUBSCRIBED") {
-            // If previously polling, stop it
-            if (pollingInterval) {
-              clearInterval(pollingInterval);
-              pollingInterval = undefined;
-            }
             console.log("Realtime notifications subscribed");
           } else if (status === "CHANNEL_ERROR" || status === "CLOSED") {
-            console.warn("Realtime subscription unavailable for notifications, falling back to polling");
-            // Start polling every 5s
-            if (!pollingInterval) {
-              pollingInterval = window.setInterval(() => {
-                fetchNotifications();
-              }, 5000) as unknown as number;
-            }
+            console.warn("Realtime subscription unavailable for notifications - NOT using polling to prevent cascade re-renders");
+            // DO NOT USE POLLING - it causes the entire dashboard to re-render every 5 seconds
+            // which cascades to all child components including PatientAppointmentHistory
           }
         });
 
@@ -103,18 +92,12 @@ export const Notifications = ({ userId }: { userId: string }) => {
         } catch (e) {
           // ignore
         }
-        // clear polling if present
-        try {
-          if (typeof pollingInterval !== 'undefined') clearInterval(pollingInterval as number);
-        } catch (e) {}
       };
     } catch (error) {
       console.error("Failed to set up realtime subscription for notifications:", error);
-      // fallback: start simple polling
-      const fallbackInterval = window.setInterval(() => fetchNotifications(), 5000) as unknown as number;
+      // DO NOT USE POLLING FALLBACK
       return () => {
         mounted = false;
-        try { clearInterval(fallbackInterval as number); } catch (e) {}
       };
     }
   }, [userId]);
