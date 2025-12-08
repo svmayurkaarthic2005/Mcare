@@ -63,170 +63,30 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
   } | null>(null);
 
   useEffect(() => {
-    if (patientId) {
-      fetchPatientInfo();
-      fetchAppointmentHistory();
-      fetchFeedbacks();
-      fetchPrescriptions();
-    }
-  }, [patientId]);
-
-  // Real-time subscriptions
-  useEffect(() => {
     if (!patientId) return;
-
-    let pollingInterval: number | undefined;
-    let refreshTimeout: NodeJS.Timeout | undefined;
-    let lastFetchTime = 0;
-    const MIN_REFRESH_INTERVAL = 2000; // Minimum 2 seconds between refreshes
-
-    const debouncedFetch = () => {
-      const now = Date.now();
-      if (now - lastFetchTime < MIN_REFRESH_INTERVAL) {
-        // Refresh too soon, debounce it
-        if (refreshTimeout) clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          lastFetchTime = Date.now();
-          fetchAppointmentHistory();
-        }, MIN_REFRESH_INTERVAL - (now - lastFetchTime));
-        return;
+    
+    // Only fetch once on mount and when patientId actually changes
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (!isMounted) return;
+      try {
+        await Promise.all([
+          fetchPatientInfo(),
+          fetchAppointmentHistory(),
+          fetchFeedbacks(),
+          fetchPrescriptions()
+        ]);
+      } catch (error) {
+        console.error("Error loading appointment history data:", error);
       }
-      lastFetchTime = now;
-      fetchAppointmentHistory();
     };
-
-    try {
-      const appointmentsChannel = supabase
-        .channel('patient-appointment-history')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'appointments',
-            filter: `patient_id=eq.${patientId}`
-          },
-          () => {
-            debouncedFetch();
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            // Realtime is working, clear polling if active
-            if (pollingInterval) {
-              clearInterval(pollingInterval);
-              pollingInterval = undefined;
-            }
-          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.warn('Realtime subscription unavailable for appointment history, falling back to polling');
-            // Start polling every 30 seconds (instead of 10)
-            if (!pollingInterval) {
-              pollingInterval = window.setInterval(() => {
-                debouncedFetch();
-              }, 30000) as unknown as number;
-            }
-          }
-        });
-
-      const feedbackChannel = supabase
-        .channel('patient-feedback-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'appointment_feedback',
-            filter: `patient_id=eq.${patientId}`
-          },
-          () => {
-            fetchFeedbacks();
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            // Realtime is working
-          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.warn('Realtime subscription unavailable for feedback updates');
-          }
-        });
-
-      // Add real-time subscription for emergency bookings
-      // @ts-ignore - emergency_bookings table added via migration
-      const emergencyBookingsChannel = supabase
-        .channel('patient-emergency-bookings-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'emergency_bookings',
-            filter: `patient_id=eq.${patientId}`
-          },
-          () => {
-            debouncedFetch();
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.warn('Realtime subscription unavailable for emergency bookings');
-          }
-        });
-
-      // Add real-time subscription for prescriptions
-      const prescriptionsChannel = supabase
-        .channel('patient-prescriptions-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'prescriptions',
-            filter: `patient_id=eq.${patientId}`
-          },
-          () => {
-            fetchPrescriptions();
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.warn('Realtime subscription unavailable for prescriptions');
-          }
-        });
-
-      return () => {
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-        }
-        if (refreshTimeout) {
-          clearTimeout(refreshTimeout);
-        }
-        try {
-          supabase.removeChannel(appointmentsChannel);
-          supabase.removeChannel(feedbackChannel);
-          supabase.removeChannel(emergencyBookingsChannel);
-          supabase.removeChannel(prescriptionsChannel);
-        } catch (e) {
-          // ignore cleanup errors
-        }
-      };
-    } catch (error) {
-      console.error('Failed to set up realtime subscriptions, using polling:', error);
-      // Start polling as fallback (30 seconds)
-      pollingInterval = window.setInterval(() => {
-        fetchAppointmentHistory();
-        fetchFeedbacks();
-        fetchPrescriptions();
-      }, 30000) as unknown as number;
-      
-      return () => {
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-        }
-        if (refreshTimeout) {
-          clearTimeout(refreshTimeout);
-        }
-      };
-    }
+    
+    loadData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [patientId]);
 
   const fetchPatientInfo = async () => {
@@ -250,8 +110,6 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
 
   const fetchAppointmentHistory = async () => {
     try {
-      setLoading(true);
-      
       // Fetch regular appointments
       const { data: appointments, error: apptError } = await (supabase as any)
         .from("appointments")
@@ -334,10 +192,10 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
       console.log("[fetchAppointmentHistory] Loaded appointments:", allAppointments.length, "items");
       console.log("[fetchAppointmentHistory] Appointment IDs:", allAppointments.map(a => ({ id: a.id, isEmergency: a.isEmergencyBooking })));
       setAppointments(allAppointments);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching appointment history:", error);
       toast.error("Failed to load appointment history");
-    } finally {
       setLoading(false);
     }
   };
@@ -591,14 +449,41 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
     <>
       <Card className="overflow-hidden bg-gradient-to-br from-card to-card/50 border-primary/10 shadow-[var(--shadow-card)]">
         <div className="p-3 sm:p-6 border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="h-8 sm:h-10 w-8 sm:w-10 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-md">
-              <Calendar className="h-4 sm:h-5 w-4 sm:w-5 text-primary-foreground" />
+          <div className="flex items-center gap-2 sm:gap-3 justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 sm:h-10 w-8 sm:w-10 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-md">
+                <Calendar className="h-4 sm:h-5 w-4 sm:w-5 text-primary-foreground" />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold">Appointment History</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Your past consultations and feedback</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg sm:text-xl font-semibold">Appointment History</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground">Your past consultations and feedback</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                fetchAppointmentHistory();
+                fetchFeedbacks();
+                fetchPrescriptions();
+              }}
+              disabled={loading}
+              className="h-8 w-8 p-0"
+              title="Refresh appointment history"
+            >
+              <svg
+                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+              </svg>
+            </Button>
           </div>
         </div>
         
@@ -650,7 +535,9 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                             Prescriptions ({prescriptions[appointment.id].reduce((total, rx) => total + rx.medicines.length, 0)} medicine{prescriptions[appointment.id].reduce((total, rx) => total + rx.medicines.length, 0) !== 1 ? 's' : ''})
                           </span>
                         </div>
-                        <ScrollArea className="w-full max-h-32 rounded-lg border border-border/40">
+                        <div 
+                          className="max-h-48 overflow-y-auto rounded-lg border border-border/40"
+                        >
                           <div className="space-y-1.5 p-2">
                             {prescriptions[appointment.id].map((rx, rxIdx) => (
                               <div key={rx.id} className="bg-background/50 p-1.5 rounded space-y-1">
@@ -725,7 +612,7 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                             </div>
                           ))}
                           </div>
-                        </ScrollArea>
+                        </div>
                       </div>
                     ) : null}
 
