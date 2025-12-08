@@ -77,9 +77,9 @@ export const Notifications = ({ userId }: { userId: string }) => {
         .subscribe((status) => {
           // status values: 'SUBSCRIBED', 'CHANNEL_ERROR', 'CLOSED', etc.
           if (status === "SUBSCRIBED") {
-            console.log("Realtime notifications subscribed");
+            // Suppress verbose logging in development
           } else if (status === "CHANNEL_ERROR" || status === "CLOSED") {
-            console.warn("Realtime subscription unavailable for notifications - NOT using polling to prevent cascade re-renders");
+            // Realtime connection failed - expected in local dev
             // DO NOT USE POLLING - it causes the entire dashboard to re-render every 5 seconds
             // which cascades to all child components including PatientAppointmentHistory
           }
@@ -94,7 +94,7 @@ export const Notifications = ({ userId }: { userId: string }) => {
         }
       };
     } catch (error) {
-      console.error("Failed to set up realtime subscription for notifications:", error);
+      // Realtime subscription setup failed - expected behavior
       // DO NOT USE POLLING FALLBACK
       return () => {
         mounted = false;
