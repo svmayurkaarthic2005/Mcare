@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { hasAppointmentPassed, formatAppointmentDateIST, getCurrentISTTime } from "@/lib/istTimezone";
 
 interface Appointment {
@@ -37,9 +44,61 @@ export const AppointmentManagement = ({ doctorId }: { doctorId: string }) => {
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [doctorNotes, setDoctorNotes] = useState("");
+  const appointmentsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchAppointments();
+    if (doctorId) {
+      fetchAppointments();
+      
+      // Subscribe to new emergency bookings for real-time updates
+      const channel = (supabase as any)
+        .channel(`emergency-bookings-${doctorId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'emergency_bookings',
+            filter: `doctor_id=eq.${doctorId}`
+          },
+          () => {
+            console.log('[AppointmentManagement] New emergency booking received - refreshing data');
+            fetchAppointments();
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [doctorId]);
+
+  // Listen for scroll-to-emergency-bookings event (triggered when clicking notification)
+  useEffect(() => {
+    const handleScrollToEmergencyBookings = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (appointmentsRef.current) {
+        appointmentsRef.current.scrollIntoView({ 
+          behavior: customEvent.detail?.smooth ? 'smooth' : 'auto',
+          block: 'start'
+        });
+        // Highlight the section briefly with Tailwind CSS animation
+        if (appointmentsRef.current.classList) {
+          appointmentsRef.current.classList.add('animate-pulse');
+          setTimeout(() => {
+            if (appointmentsRef.current?.classList) {
+              appointmentsRef.current.classList.remove('animate-pulse');
+            }
+          }, 2000);
+        }
+        // Refresh emergency bookings data
+        fetchAppointments();
+      }
+    };
+
+    window.addEventListener('scrollToEmergencyBookings', handleScrollToEmergencyBookings);
+    return () => window.removeEventListener('scrollToEmergencyBookings', handleScrollToEmergencyBookings);
   }, [doctorId]);
 
   const fetchAppointments = async () => {
@@ -204,13 +263,21 @@ export const AppointmentManagement = ({ doctorId }: { doctorId: string }) => {
       const tableName = targetAppointment?.isEmergency ? "emergency_bookings" : "appointments";
       
       // Update appointment status
+      const updatePayload: any = {
+        status,
+        updated_at: new Date().toISOString(),
+      };
+
+      // emergency_bookings uses `doctor_notes`, regular appointments use `notes`
+      if (tableName === "emergency_bookings") {
+        updatePayload.doctor_notes = status === "cancelled" ? "" : doctorNotes;
+      } else {
+        updatePayload.notes = status === "cancelled" ? "" : doctorNotes;
+      }
+
       const { error } = await (supabase as any)
         .from(tableName)
-        .update({
-          status,
-          doctor_notes: status === "cancelled" ? "" : doctorNotes,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq("id", appointmentId);
 
       if (error) throw error;
@@ -321,7 +388,7 @@ export const AppointmentManagement = ({ doctorId }: { doctorId: string }) => {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card ref={appointmentsRef} className="bg-gradient-to-br from-card to-card/50 border-primary/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
@@ -417,7 +484,7 @@ export const AppointmentManagement = ({ doctorId }: { doctorId: string }) => {
                 {appointments.map((apt) => (
                   <Card 
                     key={apt.id} 
-                    className={`p-4 transition-all duration-200 active:scale-[0.98] touch-manipulation border-l-4 ${apt.isEmergency ? "bg-red-50 border-l-red-600" : "border-l-transparent"}`}
+                    className={`p-4 transition-all duration-200 active:scale-[0.98] touch-manipulation border-l-4 ${apt.isEmergency ? "border-l-red-600" : "border-l-transparent"}`}
                   >
                     <div className="space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -490,55 +557,62 @@ export const AppointmentManagement = ({ doctorId }: { doctorId: string }) => {
       </Card>
 
       {selectedAppointment && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Review Appointment</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Patient: {selectedAppointment.patient_name}</p>
-              <p className="text-sm text-muted-foreground">
-                Date: {formatAppointmentDateIST(selectedAppointment.appointment_date)}
-              </p>
-              <p className="text-sm text-muted-foreground">Reason: {selectedAppointment.reason}</p>
-            </div>
+        <Dialog open={!!selectedAppointment} onOpenChange={(open) => !open && setSelectedAppointment(null)}>
+          <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+            <DialogHeader className="pb-2 sm:pb-4">
+              <DialogTitle className="text-lg sm:text-xl">Review Appointment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-1.5 text-xs sm:text-sm">
+                <p className="text-muted-foreground"><span className="font-medium">Patient:</span> {selectedAppointment.patient_name}</p>
+                <p className="text-muted-foreground"><span className="font-medium">Date:</span> {formatAppointmentDateIST(selectedAppointment.appointment_date)}</p>
+                <p className="text-muted-foreground"><span className="font-medium">Reason:</span> {selectedAppointment.reason}</p>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="doctorNotes">Doctor's Notes</Label>
-              <Textarea
-                id="doctorNotes"
-                placeholder="Add notes about this appointment..."
-                value={doctorNotes}
-                onChange={(e) => setDoctorNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="doctorNotes" className="text-xs sm:text-sm">Doctor's Notes</Label>
+                <Textarea
+                  id="doctorNotes"
+                  placeholder="Add notes about this appointment..."
+                  value={doctorNotes}
+                  onChange={(e) => setDoctorNotes(e.target.value)}
+                  rows={2}
+                  className="text-xs sm:text-sm"
+                />
+              </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="default"
-                onClick={() => updateAppointmentStatus(selectedAppointment.id, "approved")}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => updateAppointmentStatus(selectedAppointment.id, "rejected")}
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Reject
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setSelectedAppointment(null)}
-                className="transition-colors border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground hover:border-transparent"
-              >
-                Cancel
-              </Button>
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end pt-2">
+                <DialogClose asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto transition-colors border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground hover:border-transparent text-xs sm:text-sm"
+                  >
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => updateAppointmentStatus(selectedAppointment.id, "rejected")}
+                  className="w-full sm:w-auto text-xs sm:text-sm"
+                >
+                  <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Reject
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => updateAppointmentStatus(selectedAppointment.id, "approved")}
+                  className="w-full sm:w-auto text-xs sm:text-sm"
+                >
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Approve
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

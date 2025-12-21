@@ -179,12 +179,22 @@ export const DoctorAppointmentHistory = ({
       // Fetch approved emergency bookings
       const { data: emergencyBookings, error: emergencyError } = await (supabase as any)
         .from("emergency_bookings")
-        .select("id, patient_id, status, urgency_level, reason, responded_at, doctor_notes")
+        .select("id, patient_id, status, urgency_level, reason, responded_at, scheduled_date, doctor_notes")
         .eq("doctor_id", doctorId)
         .eq("status", "approved")
-        .order("responded_at", { ascending: false });
+        .order("scheduled_date", { ascending: false });
 
       if (emergencyError) throw emergencyError;
+      
+      // Debug: Log emergency bookings to check scheduled_date values
+      if (emergencyBookings && emergencyBookings.length > 0) {
+        console.log('[DoctorAppointmentHistory] Emergency bookings:', emergencyBookings.map(eb => ({
+          id: eb.id,
+          scheduled_date: eb.scheduled_date,
+          responded_at: eb.responded_at,
+          status: eb.status
+        })));
+      }
 
       // Combine both data sources
       let allAppointments: any[] = [...(data || [])];
@@ -197,20 +207,38 @@ export const DoctorAppointmentHistory = ({
           .select("id, full_name, email")
           .in("id", emergencyPatientIds);
 
-        const emergencyAppointments = (emergencyBookings as any[]).map((eb: any) => ({
-          id: eb.id,
-          patient_id: eb.patient_id,
-          doctor_id: doctorId,
-          appointment_date: eb.responded_at || new Date().toISOString(),
-          status: "approved",
-          reason: eb.reason,
-          notes: `Emergency - ${eb.urgency_level?.toUpperCase()} | ${eb.reason}`,
-          patient_name: (patientProfiles as any[])?.find((p: any) => p.id === eb.patient_id)?.full_name || "Unknown Patient",
-          patient_email: (patientProfiles as any[])?.find((p: any) => p.id === eb.patient_id)?.email || "",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          is_emergency_booking: true,
-        }));
+        const emergencyAppointments = (emergencyBookings as any[]).map((eb: any) => {
+          // IMPORTANT: Use scheduled_date (the actual booked appointment time) as the primary source
+          // scheduled_date is set when doctor approves the emergency booking
+          // DO NOT use responded_at (doctor's response time) as it's not the appointment time
+          
+          let appointmentTime = eb.scheduled_date;
+          
+          if (!appointmentTime) {
+            console.warn(`[DoctorAppointmentHistory] Emergency booking ${eb.id} missing scheduled_date, falling back to responded_at`);
+            appointmentTime = eb.responded_at;
+          }
+          
+          if (!appointmentTime) {
+            console.error(`[DoctorAppointmentHistory] Emergency booking ${eb.id} has no scheduled_date or responded_at!`);
+            appointmentTime = new Date().toISOString();
+          }
+          
+          return {
+            id: eb.id,
+            patient_id: eb.patient_id,
+            doctor_id: doctorId,
+            appointment_date: appointmentTime,
+            status: "approved",
+            reason: eb.reason,
+            notes: `Emergency - ${eb.urgency_level?.toUpperCase()} | ${eb.reason}`,
+            patient_name: (patientProfiles as any[])?.find((p: any) => p.id === eb.patient_id)?.full_name || "Unknown Patient",
+            patient_email: (patientProfiles as any[])?.find((p: any) => p.id === eb.patient_id)?.email || "",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_emergency_booking: true,
+          };
+        });
 
         allAppointments = [...allAppointments, ...emergencyAppointments];
       }
@@ -293,6 +321,44 @@ export const DoctorAppointmentHistory = ({
     return (appointment.status === "completed" || appointment.status === "approved") && appointmentDate < now;
   };
 
+  const cancelAppointment = async (appointment: Appointment) => {
+    try {
+      // Prevent cancelling after appointment time
+      if (hasAppointmentPassed(appointment.appointment_date)) {
+        toast.error("Cannot cancel an appointment that has already passed");
+        return;
+      }
+
+      const isEmergency = !!appointment.is_emergency_booking;
+      const tableName = isEmergency ? "emergency_bookings" : "appointments";
+
+      const updatePayload: any = {
+        status: "cancelled",
+        updated_at: new Date().toISOString(),
+      };
+
+      // Use doctor_notes for emergency bookings, notes for regular appointments
+      if (isEmergency) {
+        updatePayload.doctor_notes = "";
+      } else {
+        updatePayload.notes = "";
+      }
+
+      const { error } = await (supabase as any)
+        .from(tableName)
+        .update(updatePayload)
+        .eq("id", appointment.id);
+
+      if (error) throw error;
+
+      toast.success("Appointment cancelled successfully");
+      await fetchAppointmentHistory();
+    } catch (err) {
+      console.error("Error cancelling appointment:", err);
+      toast.error("Failed to cancel appointment");
+    }
+  };
+
   const getStatusBadge = (status: string, notes?: string) => {
     const isEmergency = notes?.includes("Emergency -");
     const statusConfig = {
@@ -352,26 +418,38 @@ export const DoctorAppointmentHistory = ({
                           <span className="truncate">{new Date(appointment.appointment_date).toLocaleDateString()}</span>
                           <span className="text-xs text-muted-foreground">{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={!hasAppointmentPassed(appointment.appointment_date)}
-                          onClick={() =>
-                            setPrescriptionDialog({
-                              open: true,
-                              appointmentId: appointment.id,
-                              patientId: appointment.patient_id,
-                              patientName: appointment.patient_name || "Patient",
-                              patientEmail: appointment.patient_email || "",
-                              appointmentDate: appointment.appointment_date,
-                              isEmergencyBooking: appointment.is_emergency_booking || false,
-                            })
-                          }
-                          className="border-primary/20 hover:bg-primary/10 h-7 w-7 p-0 sm:h-8 sm:w-8"
-                          title={hasAppointmentPassed(appointment.appointment_date) ? "Add or manage prescription for this appointment" : "Prescription can only be added after appointment time"}
-                        >
-                          <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                        </Button>
+                        <div className="flex w-full sm:w-auto flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 sm:ml-auto">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!appointment.is_emergency_booking && !hasAppointmentPassed(appointment.appointment_date)}
+                            onClick={() =>
+                              setPrescriptionDialog({
+                                open: true,
+                                appointmentId: appointment.id,
+                                patientId: appointment.patient_id,
+                                patientName: appointment.patient_name || "Patient",
+                                patientEmail: appointment.patient_email || "",
+                                appointmentDate: appointment.appointment_date,
+                                isEmergencyBooking: appointment.is_emergency_booking || false,
+                              })
+                            }
+                            className="w-full sm:w-8 h-9 sm:h-8 p-2 sm:p-0 flex items-center justify-center border-primary/20 hover:bg-primary/10"
+                            title={appointment.is_emergency_booking ? "Add or manage prescription for this emergency appointment" : hasAppointmentPassed(appointment.appointment_date) ? "Add or manage prescription for this appointment" : "Prescription can only be added after appointment time"}
+                          >
+                            <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                          {appointment.status === "approved" && !hasAppointmentPassed(appointment.appointment_date) && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => cancelAppointment(appointment)}
+                              className="w-full sm:w-auto h-8 sm:h-8 px-3 text-xs hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
@@ -434,7 +512,7 @@ export const DoctorAppointmentHistory = ({
                                 patientName: appointment.patient_name || "Patient",
                               })
                             }
-                            className="bg-gradient-to-r from-primary to-primary-light hover:shadow-md transition-all h-8 text-xs w-full sm:w-auto"
+                            className="sm:w-auto w-full bg-gradient-to-r from-primary to-primary-light hover:shadow-md transition-all h-8 text-xs"
                           >
                             <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                             Provide Feedback

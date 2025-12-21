@@ -636,18 +636,18 @@ const DoctorDashboard = ({ showChat = false }: DoctorDashboardProps) => {
       {/* Header - Enhanced with Landing navbar style */}
       <header className="border-b border-border/30 bg-background/75 backdrop-blur-2xl fixed top-0 left-0 w-full z-40 shadow-lg shadow-primary/5">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative flex items-center justify-between py-6 lg:py-6">
+          <div className="relative flex items-center justify-between py-3 lg:py-4">
             <div className="flex items-center gap-3">
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
                     <button 
                       type="button"
                       onClick={() => setMobileMenuOpen(true)}
-                      className="lg:hidden z-50 p-2.5 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group" 
+                      className="md:hidden lg:hidden z-50 p-2 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group" 
                       aria-label="Toggle menu"
                     >
                       <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <Menu className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
+                      <Menu className="h-5 w-5 sm:h-6 sm:w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
                     </button>
                   </SheetTrigger>
                 <SheetContent side="left" className="w-3/4 p-0 overflow-y-auto">
@@ -686,7 +686,7 @@ const DoctorDashboard = ({ showChat = false }: DoctorDashboardProps) => {
                   </nav>
                 </SheetContent>
               </Sheet>
-              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-gradient-to-br from-primary via-primary-light to-accent flex items-center justify-center shadow-lg shadow-primary/30 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-primary/50 group-hover:scale-110">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-lg bg-gradient-to-br from-primary via-primary-light to-accent flex items-center justify-center shadow-lg shadow-primary/30 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-primary/50 group-hover:scale-110">
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/20 via-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
                 <Activity className="h-6 w-6 lg:h-7 lg:w-7 text-primary-foreground relative z-10" />
               </div>

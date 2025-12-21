@@ -109,7 +109,12 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
           console.warn("[fetchAppointmentHistory] Error fetching emergency bookings:", emergencyError);
         }
       } else if (emergencyData && emergencyData.length > 0) {
-        console.log("[fetchAppointmentHistory] Fetched emergency bookings:", emergencyData.length);
+        console.log("[fetchAppointmentHistory] Fetched emergency bookings (APPROVED ONLY):", emergencyData.map(eb => ({
+          id: eb.id,
+          status: eb.status,
+          scheduled_date: eb.scheduled_date,
+          responded_at: eb.responded_at
+        })));
         // Sort in code since order() might have issues
         emergencyBookings = emergencyData.sort((a, b) => {
           const dateA = new Date(a.responded_at || a.scheduled_date || a.requested_at || a.created_at || 0).getTime();
@@ -129,18 +134,26 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
           .select("id, full_name")
           .in("id", emergencyDoctorIds);
 
-        const emergencyAppointments = emergencyBookings.map(eb => ({
-          id: eb.id,
-          doctor_id: eb.doctor_id,
-          // Use responded_at if available (doctor has responded), otherwise use requested_at, or scheduled_date
-          appointment_date: eb.responded_at || eb.scheduled_date || eb.requested_at || new Date().toISOString(),
-          status: eb.status === 'rejected' ? 'cancelled' : eb.status, // Normalize status for UI
-          reason: eb.reason,
-          notes: eb.doctor_notes,
-          doctor_name: (doctorProfiles as any[])?.find((doc: any) => doc.id === eb.doctor_id)?.full_name || "Unknown Doctor",
-          isEmergencyBooking: true,
-          urgency_level: eb.urgency_level,
-        }));
+        const emergencyAppointments = emergencyBookings.map(eb => {
+          // IMPORTANT: Use scheduled_date (actual appointment time) as primary source
+          // DO NOT use responded_at (doctor's response time) as it's not the appointment time
+          // Only use responded_at as fallback if scheduled_date is missing
+          const appointmentTime = eb.scheduled_date 
+            ? eb.scheduled_date 
+            : (eb.responded_at || eb.requested_at || new Date().toISOString());
+          
+          return {
+            id: eb.id,
+            doctor_id: eb.doctor_id,
+            appointment_date: appointmentTime,
+            status: eb.status === 'rejected' ? 'cancelled' : eb.status, // Normalize status for UI
+            reason: eb.reason,
+            notes: eb.doctor_notes,
+            doctor_name: (doctorProfiles as any[])?.find((doc: any) => doc.id === eb.doctor_id)?.full_name || "Unknown Doctor",
+            isEmergencyBooking: true,
+            urgency_level: eb.urgency_level,
+          };
+        });
 
         allAppointments = [...allAppointments, ...emergencyAppointments];
       }
@@ -443,9 +456,9 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
     };
     const className = urgencyBadges[normalized] || "bg-orange-500 text-white";
     return (
-      <Badge className={`${className} gap-1 uppercase text-xs font-bold`}>
-        <AlertTriangle className="h-3 w-3" />
-        {normalized}
+      <Badge className={`${className} gap-0.5 sm:gap-1 uppercase text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1`}>
+        <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+        <span className="hidden sm:inline">{normalized}</span>
       </Badge>
     );
   };
@@ -488,31 +501,31 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
               {appointments.map((appointment) => (
                 <Card
                   key={appointment.id}
-                  className="group p-3 sm:p-4 border-primary/10 hover:shadow-[var(--shadow-glow)] hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-card to-card/80"
+                  className="group p-2 sm:p-4 border-primary/10 hover:shadow-[var(--shadow-glow)] hover:border-primary/30 transition-all duration-300 bg-gradient-to-br from-card to-card/80"
                 >
-                  <div className="space-y-2 sm:space-y-3">
-                    {/* Header with doctor name and status */}
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-0.5 flex-wrap">
-                          <p className="text-xs sm:text-sm font-medium group-hover:text-primary transition-colors truncate">{appointment.doctor_name}</p>
-                          {(appointment as any).isEmergency || (appointment as any).isEmergencyBooking && appointment.urgency_level && (
-                            <span className="flex-shrink-0">{getUrgencyBadge(appointment.urgency_level)}</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:gap-2 gap-0 mt-0.5 text-xs text-muted-foreground">
-                          <span>{new Date(appointment.appointment_date).toLocaleDateString()}</span>
-                          <span className="block sm:inline text-xs text-muted-foreground">{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
+                  <div className="space-y-1.5 sm:space-y-3">
+                    {/* Header with doctor name and urgency badge */}
+                    <div className="flex items-center justify-between gap-1.5 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium group-hover:text-primary transition-colors truncate flex-1">{appointment.doctor_name}</p>
+                      {(appointment as any).isEmergency || (appointment as any).isEmergencyBooking && appointment.urgency_level && (
+                        <span className="flex-shrink-0">{getUrgencyBadge(appointment.urgency_level)}</span>
+                      )}
+                    </div>
+
+                    {/* Date, time and status row */}
+                    <div className="flex items-start justify-between gap-1.5">
+                      <div className="flex flex-col gap-0.5 text-xs text-muted-foreground flex-1">
+                        <span>{new Date(appointment.appointment_date).toLocaleDateString()}</span>
+                        <span>{new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                      <div className="flex-shrink-0 text-right mt-1 sm:mt-0">{getStatusBadge(appointment.status)}</div>
+                      <div className="flex-shrink-0">{getStatusBadge(appointment.status)}</div>
                     </div>
 
                     {appointment.reason && (
-                      <p className="text-xs bg-muted/30 p-1 sm:p-1.5 rounded break-words"><span className="font-medium">Reason:</span> {appointment.reason}</p>
+                      <div className="text-xs bg-muted/30 p-2 sm:p-2.5 rounded break-words"><span className="font-medium">Reason:</span> <span className="ml-1">{appointment.reason}</span></div>
                     )}
                     {appointment.notes && (
-                      <p className="text-xs bg-muted/30 p-1 sm:p-1.5 rounded break-words"><span className="font-medium">Notes:</span> {appointment.notes}</p>
+                      <div className="text-xs bg-muted/30 p-2 sm:p-2.5 rounded break-words"><span className="font-medium">Notes:</span> <span className="ml-1">{appointment.notes}</span></div>
                     )}
 
                     {/* Prescriptions Section */}
@@ -657,7 +670,7 @@ export const PatientAppointmentHistory = ({ patientId }: { patientId: string }) 
                                 doctorName: appointment.doctor_name || "Doctor",
                               })
                             }
-                            className="bg-gradient-to-r from-primary to-primary-light hover:shadow-md transition-all"
+                            className="sm:w-auto w-full bg-gradient-to-r from-primary to-primary-light hover:shadow-md transition-all"
                           >
                             <MessageSquare className="h-3 w-3 mr-1" />
                             Provide Feedback

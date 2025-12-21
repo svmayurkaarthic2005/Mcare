@@ -25,6 +25,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   
   // Password change
   const [currentPassword, setCurrentPassword] = useState("");
@@ -33,7 +34,6 @@ const Settings = () => {
   
   // Notification preferences
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [medicationReminders, setMedicationReminders] = useState(true);
   const [appointmentAlerts, setAppointmentAlerts] = useState(true);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
@@ -71,6 +71,8 @@ const Settings = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      setUserId(user.id); // Store the user ID
 
       const { data, error } = await supabase
         .from("user_roles")
@@ -117,27 +119,21 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Load from profiles table
       const { data, error } = await supabase
-        .from("notification_preferences")
-        .select("*")
-        .eq("user_id", user.id)
+        .from("profiles")
+        .select("send_email, send_whatsapp")
+        .eq("id", user.id)
         .single();
 
       if (error) {
-        // If no preferences exist, create default ones
-        if (error.code === "PGRST116") {
-          const { error: insertError } = await supabase
-            .from("notification_preferences")
-            .insert({ user_id: user.id });
-          
-          if (insertError) throw insertError;
-        } else {
-          throw error;
-        }
-      } else if (data) {
-        setEmailNotifications(data.email_notifications);
-        setMedicationReminders(data.medication_reminders);
-        setAppointmentAlerts(data.appointment_alerts);
+        console.warn("Notification preferences not found, using defaults", error);
+        return;
+      }
+
+      if (data) {
+        setEmailNotifications(data.send_email ?? true);
+        setAppointmentAlerts(data.send_whatsapp ?? true);
       }
     } catch (error) {
       console.error("Error loading notification preferences:", error);
@@ -151,8 +147,30 @@ const Settings = () => {
       if (!user) return;
 
       const userAgent = navigator.userAgent;
-      const browserInfo = userAgent.split(" ").slice(-2).join(" ");
-      const deviceInfo = /Mobile|Android|iPhone/.test(userAgent) ? "Mobile" : "Desktop";
+      
+      // Improved browser detection
+      let browserInfo = "Unknown";
+      if (userAgent.includes("Firefox")) {
+        const match = userAgent.match(/Firefox\/(\d+)/);
+        browserInfo = match ? `Firefox ${match[1]}` : "Firefox";
+      } else if (userAgent.includes("Chrome") && !userAgent.includes("Chromium")) {
+        const match = userAgent.match(/Chrome\/(\d+)/);
+        browserInfo = match ? `Chrome ${match[1]}` : "Chrome";
+      } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+        const match = userAgent.match(/Version\/(\d+)/);
+        browserInfo = match ? `Safari ${match[1]}` : "Safari";
+      } else if (userAgent.includes("Edge")) {
+        const match = userAgent.match(/Edg\/(\d+)/);
+        browserInfo = match ? `Edge ${match[1]}` : "Edge";
+      } else if (userAgent.includes("Opera") || userAgent.includes("OPR")) {
+        const match = userAgent.match(/(?:OPR|Opera)\/(\d+)/);
+        browserInfo = match ? `Opera ${match[1]}` : "Opera";
+      } else if (userAgent.includes("Chromium")) {
+        const match = userAgent.match(/Chromium\/(\d+)/);
+        browserInfo = match ? `Chromium ${match[1]}` : "Chromium";
+      }
+      
+      const deviceInfo = /Mobile|Android|iPhone|iPad|iPod/.test(userAgent) ? "Mobile" : "Desktop";
       
       const lastSignIn = user.last_sign_in_at 
         ? new Date(user.last_sign_in_at).toLocaleDateString('en-US', {
@@ -237,10 +255,18 @@ const Settings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Update profiles table based on field name
+      let updateData: any = {};
+      if (field === "email_notifications") {
+        updateData.send_email = value;
+      } else if (field === "appointment_alerts") {
+        updateData.send_whatsapp = value;
+      }
+
       const { error } = await supabase
-        .from("notification_preferences")
-        .update({ [field]: value })
-        .eq("user_id", user.id);
+        .from("profiles")
+        .update(updateData)
+        .eq("id", user.id);
 
       if (error) throw error;
 
@@ -256,6 +282,11 @@ const Settings = () => {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!currentPassword) {
+      toast.error("Please enter your current password");
+      return;
+    }
+    
     if (newPassword.length < 6) {
       toast.error("New password must be at least 6 characters long");
       return;
@@ -269,11 +300,27 @@ const Settings = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !user.email) {
+        throw new Error("User not found");
+      }
+
+      // Verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        throw new Error("Current password is incorrect");
+      }
+
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       toast.success("Password updated successfully!");
       setCurrentPassword("");
@@ -288,40 +335,31 @@ const Settings = () => {
   };
 
   const handleDeleteAccount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    const { data } = await supabase.auth.getSession()
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        toast.error("No active session found");
-        return;
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to delete account');
-      }
-
-      toast.success("Account deleted successfully");
-      await supabase.auth.signOut();
-      navigate("/");
-    } catch (error: any) {
-      console.error("Error deleting account:", error);
-      toast.error(error.message || "Failed to delete account");
+    if (!data.session) {
+      alert("User not logged in")
+      return
     }
-  };
+
+    const res = await fetch(
+      "https://wvhlrmsugmcdhsaltygg.functions.supabase.co/delete-account",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${data.session.access_token}`,
+        },
+      }
+    )
+
+    if (!res.ok) {
+      alert("Delete failed")
+      return
+    }
+
+    await supabase.auth.signOut()
+    window.location.href = "/"
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/30 to-background p-4">
@@ -343,6 +381,35 @@ const Settings = () => {
             </p>
           </div>
 
+          {/* Profile Information */}
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Shield className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-semibold">Profile Information</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Profile ID</Label>
+                <div className="flex items-center gap-2">
+                  <code className="bg-muted p-2 rounded text-sm font-mono flex-1 break-all">
+                    {userId}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(userId);
+                      toast.success("Profile ID copied to clipboard");
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           {/* Password Change */}
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -351,6 +418,18 @@ const Settings = () => {
             </div>
             
             <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  placeholder="Enter your current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
                 <Input
@@ -415,31 +494,6 @@ const Settings = () => {
               </div>
 
               <Separator />
-
-              {/* Only show medication reminders for patients */}
-              {userRole === 'patient' && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="medication-reminders">Medication Reminders</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Get notified when it's time to take medication
-                      </p>
-                    </div>
-                    <Switch
-                      id="medication-reminders"
-                      checked={medicationReminders}
-                      onCheckedChange={(checked) => {
-                        setMedicationReminders(checked);
-                        updateNotificationPreference("medication_reminders", checked);
-                      }}
-                      disabled={loadingNotifications}
-                    />
-                  </div>
-
-                  <Separator />
-                </>
-              )}
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">

@@ -3,14 +3,26 @@
  * All appointments should use IST for consistency
  */
 
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+const IST_OFFSET_HOURS = 5.5; // IST is UTC+5:30
 
 /**
- * Convert any date to IST and return as ISO string
+ * Convert UTC date to IST and format for display
+ * Assumes the input is stored as UTC/ISO string
  */
 export const toIST = (date: Date | string): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return new Date(d.getTime() + (IST_OFFSET_MS - d.getTimezoneOffset() * 60000)).toISOString();
+  // Format in IST timezone
+  const istFormatter = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  return istFormatter.format(d);
 };
 
 /**
@@ -18,7 +30,26 @@ export const toIST = (date: Date | string): string => {
  */
 export const getCurrentISTTime = (): Date => {
   const now = new Date();
-  return new Date(now.getTime() + (IST_OFFSET_MS - now.getTimezoneOffset() * 60000));
+  const istFormatter = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  
+  const parts = istFormatter.formatToParts(now);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '0') - 1;
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+  const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+  
+  return new Date(year, month, day, hour, minute, second);
 };
 
 /**
@@ -26,21 +57,18 @@ export const getCurrentISTTime = (): Date => {
  */
 export const formatDateAsIST = (date: Date | string): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
-  const istDate = new Date(d.getTime() + (IST_OFFSET_MS - d.getTimezoneOffset() * 60000));
   
-  const dateStr = istDate.toLocaleDateString('en-IN', {
+  const formatter = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  });
-  
-  const timeStr = istDate.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
   });
   
-  return `${dateStr} ${timeStr} IST`;
+  return formatter.format(d) + ' IST';
 };
 
 /**
@@ -48,18 +76,18 @@ export const formatDateAsIST = (date: Date | string): string => {
  */
 export const formatAppointmentDateIST = (date: Date | string): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
-  const istDate = new Date(d.getTime() + (IST_OFFSET_MS - d.getTimezoneOffset() * 60000));
   
-  const options: Intl.DateTimeFormatOptions = {
+  const formatter = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-  };
+  });
   
-  return istDate.toLocaleString('en-IN', options) + ' IST';
+  return formatter.format(d) + ' IST';
 };
 
 /**
@@ -68,15 +96,21 @@ export const formatAppointmentDateIST = (date: Date | string): string => {
 export const hasAppointmentPassed = (appointmentDate: string): boolean => {
   const appointmentTime = new Date(appointmentDate);
   const currentTime = getCurrentISTTime();
-  return appointmentTime < currentTime;
+  // Convert both to UTC for accurate comparison
+  return appointmentTime.getTime() < currentTime.getTime();
 };
 
 /**
  * Get today's date in IST (YYYY-MM-DD format)
  */
 export const getTodayIST = (): string => {
-  const today = getCurrentISTTime();
-  return today.toISOString().split('T')[0];
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(new Date());
 };
 
 /**

@@ -95,8 +95,13 @@ export const ProfileDropdown = ({ user }: ProfileDropdownProps) => {
       toast.error("Error signing out");
       return;
     }
+    
     toast.success("Signed out successfully");
-    navigate("/");
+    
+    // Add a small delay to ensure auth state is fully cleared before navigating
+    setTimeout(() => {
+      navigate("/");
+    }, 100);
   };
 
   const initials = profile?.full_name

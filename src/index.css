@@ -8,13 +8,13 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 0 0% 97%;
     --foreground: 210 15% 20%;
 
-    --card: 0 0% 100%;
+    --card: 0 0% 98%;
     --card-foreground: 210 15% 20%;
 
-    --popover: 0 0% 100%;
+    --popover: 0 0% 98%;
     --popover-foreground: 210 15% 20%;
 
     /* Medical teal - trust, healthcare, professionalism */
@@ -24,10 +24,10 @@ All colors MUST be HSL.
     --primary-dark: 184 70% 35%;
 
     /* Soft backgrounds */
-    --secondary: 200 20% 96%;
+    --secondary: 200 20% 94%;
     --secondary-foreground: 210 15% 20%;
 
-    --muted: 200 15% 94%;
+    --muted: 200 15% 92%;
     
     /* Notification text for light theme */
     --notification-title: 210 20% 15%;
@@ -41,8 +41,8 @@ All colors MUST be HSL.
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 20% 88%;
-    --input: 200 20% 92%;
+    --border: 200 20% 86%;
+    --input: 200 20% 90%;
     --ring: 184 65% 45%;
 
     --radius: 0.625rem;
@@ -50,8 +50,8 @@ All colors MUST be HSL.
     /* Healthcare gradients */
     --gradient-primary: linear-gradient(135deg, hsl(184 65% 45%), hsl(200 70% 55%));
     --gradient-hero: linear-gradient(135deg, hsl(184 70% 40%), hsl(200 75% 50%), hsl(184 65% 55%));
-    --gradient-subtle: linear-gradient(180deg, hsl(200 25% 98%), hsl(184 20% 96%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(200 20% 98%));
+    --gradient-subtle: linear-gradient(180deg, hsl(200 25% 96%), hsl(184 20% 94%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 98%), hsl(200 20% 96%));
     --gradient-accent: linear-gradient(135deg, hsl(200 70% 50%), hsl(184 65% 55%));
 
     /* Shadows */

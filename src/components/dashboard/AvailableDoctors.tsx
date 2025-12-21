@@ -46,6 +46,7 @@ export const AvailableDoctors = ({ patientId }: { patientId: string }) => {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [consultationType, setConsultationType] = useState<"online" | "offline">("online");
 
   useEffect(() => {
     fetchDoctors();
@@ -72,9 +73,14 @@ export const AvailableDoctors = ({ patientId }: { patientId: string }) => {
   const generateTimeSlots = (selectedDate?: string) => {
     const slots = [];
     for (let hour = 8; hour <= 20; hour++) {
-      for (let minute = 0; minute < 60; minute += 5) {
+      for (let minute = 0; minute < 60; minute += 15) {
         // Stop at 8:30 PM
         if (hour === 20 && minute > 30) break;
+        
+        // Skip lunch break: 12:30 PM to 1:30 PM
+        if ((hour === 12 && minute >= 30) || (hour === 13 && minute < 30)) {
+          continue;
+        }
         
         const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         const isPM = hour >= 12;
@@ -111,6 +117,9 @@ export const AvailableDoctors = ({ patientId }: { patientId: string }) => {
         appointment_date: appointmentDateTime.toISOString(),
         reason: reason,
         status: "pending",
+        consultation_type: consultationType, // Patient specifies online or offline
+        meeting_url: null, // Doctor will provide this after approval
+        meeting_password: null, // Doctor will provide this after approval if needed
       });
 
       if (error) throw error;
@@ -123,7 +132,7 @@ export const AvailableDoctors = ({ patientId }: { patientId: string }) => {
           body: {
             user_id: selectedDoctor.id,
             title: 'New appointment request',
-            message: `You have a new appointment request for ${formatAppointmentDateIST(appointmentDateTime)}. Reason: ${reason || 'Not specified'}`,
+            message: `You have a new appointment request for ${formatAppointmentDateIST(appointmentDateTime)}. Please approve and provide consultation details (online link or confirm clinic location). Reason: ${reason || 'Not specified'}`,
             type: 'appointment',
             link: `/doctor-dashboard`,
           },
@@ -137,6 +146,7 @@ export const AvailableDoctors = ({ patientId }: { patientId: string }) => {
       setAppointmentDate("");
       setAppointmentTime("");
       setReason("");
+      setConsultationType("online");
     } catch (error) {
       console.error("Error requesting appointment:", error);
       toast.error("Failed to request appointment");
@@ -293,6 +303,19 @@ export const AvailableDoctors = ({ patientId }: { patientId: string }) => {
                       {slot.label}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="consultationType">Consultation Type *</Label>
+              <Select value={consultationType} onValueChange={(value: "online" | "offline") => setConsultationType(value)}>
+                <SelectTrigger id="consultationType">
+                  <SelectValue placeholder="Select consultation type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="online">Online (Video Call)</SelectItem>
+                  <SelectItem value="offline">Offline (In-Person)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

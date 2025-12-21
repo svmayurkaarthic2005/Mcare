@@ -107,6 +107,7 @@ const AppContent = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [rippleOrigin, setRippleOrigin] = useState({ x: 0, y: 0 });
   const [user, setUser] = useState<any>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -203,18 +204,24 @@ const AppContent = () => {
           if (event === 'TOKEN_REFRESHED') {
             console.log('Token refreshed successfully');
             setUser(session?.user || null);
+            setIsLoggingOut(false);
           } else if (event === 'SIGNED_OUT') {
+            setIsLoggingOut(true);
             setUser(null);
           } else if (event === 'SIGNED_IN') {
+            setIsLoggingOut(false);
             setUser(session?.user || null);
           } else if (event === 'USER_UPDATED') {
+            setIsLoggingOut(false);
             setUser(session?.user || null);
           } else {
+            setIsLoggingOut(false);
             setUser(session?.user || null);
           }
         } catch (err) {
           console.error('Error handling auth state change:', err);
           setUser(null);
+          setIsLoggingOut(false);
         }
       });
       subscription = data.subscription;
@@ -310,8 +317,8 @@ const AppContent = () => {
         </div>
       )}
 
-      {/* Global Floating AI Assistant - Only show when authenticated and not on landing/auth pages */}
-      {user?.id && location.pathname !== "/auth" && location.pathname !== "/" && (
+      {/* Global Floating AI Assistant - Only show on dashboard when authenticated */}
+      {Boolean(user?.id) && !isLoggingOut && location.pathname === "/dashboard" && (
         <FloatingAIAssistant userId={user.id} />
       )}
     </TransitionContext.Provider>

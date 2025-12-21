@@ -1,0 +1,535 @@
+{
+  "name": "Emergency Booking Escalation - With Notification Preferences",
+  "description": "Escalates emergency bookings with preference-aware WhatsApp and Email notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "tableName": {
+          "__rl": true,
+          "value": "emergency_bookings",
+          "mode": "list",
+          "cachedResultName": "emergency_bookings"
+        },
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "56a0d806-d014-468d-9018-80e6c39a3fd8",
+      "name": "Postgres Trigger - Emergency Booking",
+      "type": "n8n-nodes-base.postgresTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1472,
+        448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "2eRAPFdxX4jaYMqQ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 120,
+        "unit": "seconds"
+      },
+      "id": "delay-node-2min",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        -1280,
+        448
+      ],
+      "name": "Wait 2 Minutes (SLA Window)",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM emergency_bookings\nWHERE id = '{{ $json.id }}'\n  AND status = 'pending'\n  AND escalation_count < 3\nFOR UPDATE;\n",
+        "options": {}
+      },
+      "id": "1ba751b0-98c4-4a8f-871a-3d55fe43a358",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -1072,
+        448
+      ],
+      "name": "Postgres - Lock Row (FOR UPDATE)",
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "2eRAPFdxX4jaYMqQ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "15d5f237-2743-4765-b918-3be8fe296c29",
+              "leftValue": "={{ String($json.status).trim()}}",
+              "rightValue": "pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "38a3ac34-49ca-46c5-a579-cf3279f096c9",
+              "leftValue": "={{ Number($json.escalation_count) || 0 }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "52c9bd0c-f654-4184-ba7d-52156b954102",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -864,
+        432
+      ],
+      "name": "If - Can Escalate?",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  dp.id      AS doctor_profile_id,\n  dp.user_id AS doctor_id,\n  p.id       AS profile_id,\n  p.phone,\n  p.send_whatsapp,\n  p.send_email,\n  dp.specialization\nFROM doctor_profiles dp\nJOIN profiles p ON p.id = dp.user_id\nWHERE dp.specialization = (\n  SELECT specialization\n  FROM doctor_profiles\n  WHERE user_id = '{{ $json.doctor_id }}'\n)\nAND dp.available_for_consultation = true\nAND dp.user_id <> '{{ $json.doctor_id }}'\nORDER BY dp.updated_at ASC\nLIMIT 1;\n",
+        "options": {}
+      },
+      "id": "cf865899-554b-4c1b-a2ba-a71cb3c13346",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -656,
+        304
+      ],
+      "name": "Postgres - Find Alternate Doctor",
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "2eRAPFdxX4jaYMqQ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "009a7300-75b0-4704-a862-01bd109ddd1a",
+              "leftValue": "={{ $json.doctor_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "66ef5f74-da5d-4f44-adbd-9ce4c21e3f32",
+              "leftValue": "={{ $json.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "88ac9430-c90a-47b7-bec6-78ade9cfa2b5",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -448,
+        320
+      ],
+      "name": "If - Doctor Found?",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE emergency_bookings\nSET\n  doctor_id = '{{ $json.doctor_id }}',\n  escalation_count = escalation_count + 1,\n  last_escalated_at = now(),\n  updated_at = now()\nWHERE id = '{{ $('Postgres - Lock Row (FOR UPDATE)').item.json.id }}'\n  AND status = 'pending'\nRETURNING *;\n",
+        "options": {}
+      },
+      "id": "9032d043-2f46-42fb-b968-ae0bdbefcd55",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -272,
+        16
+      ],
+      "name": "Postgres - Update Booking",
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "2eRAPFdxX4jaYMqQ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE emergency_bookings\nSET\n  escalation_history = escalation_history || jsonb_build_object(\n    'escalation_number', escalation_count,\n    'escalated_to_doctor_id', '{{ $json.doctor_id }}',\n    'reason', 'original_doctor_no_response',\n    'timestamp', now(),\n    'specialization', '{{ $('Postgres - Find Alternate Doctor').item.json.specialization }}'\n  )\nWHERE id = '{{ $('Postgres - Lock Row (FOR UPDATE)').item.json.id }}'\nRETURNING id;\n",
+        "options": {}
+      },
+      "id": "audit-log-escalation",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -96,
+        100
+      ],
+      "name": "Postgres - Audit Log",
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "2eRAPFdxX4jaYMqQ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "whatsapp-check",
+              "leftValue": "={{ $('Postgres - Find Alternate Doctor').item.json.send_whatsapp }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-send-whatsapp",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        0,
+        100
+      ],
+      "name": "If - Send WhatsApp?",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "resource": "call",
+        "from": "+12695288401",
+        "to": "={{ $('Postgres - Find Alternate Doctor').item.json.phone }}",
+        "twiml": true,
+        "options": {
+          "statusCallback": "https://api.retellai.com/twilio/voice"
+        }
+      },
+      "id": "8fbfc2c2-2632-48d2-9cc1-8364ee0f7a48",
+      "type": "n8n-nodes-base.twilio",
+      "position": [
+        200,
+        0
+      ],
+      "name": "Twilio - Call Doctor",
+      "typeVersion": 1,
+      "credentials": {
+        "twilioApi": {
+          "id": "RiswEqi20JZ7Xhub",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "email-check",
+              "leftValue": "={{ $('Postgres - Find Alternate Doctor').item.json.send_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-send-email",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        200,
+        150
+      ],
+      "name": "If - Send Email?",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@healthcare.app",
+        "toEmail": "{{ $('Postgres - Find Alternate Doctor').item.json.email }}",
+        "subject": "Emergency Booking Escalation - Action Required",
+        "textHtml": "<h2>Emergency Booking Escalation</h2>\n<p>You have been assigned an emergency booking that requires your immediate attention.</p>\n<p><strong>Booking ID:</strong> {{ $('Postgres - Lock Row (FOR UPDATE)').item.json.id }}</p>\n<p><strong>Urgency Level:</strong> {{ $('Postgres - Lock Row (FOR UPDATE)').item.json.urgency_level }}</p>\n<p><strong>Reason:</strong> {{ $('Postgres - Lock Row (FOR UPDATE)').item.json.reason }}</p>\n<p>Please respond promptly.</p>"
+      },
+      "id": "send-email-node",
+      "type": "n8n-nodes-base.sendGrid",
+      "position": [
+        400,
+        150
+      ],
+      "name": "SendGrid - Email Doctor",
+      "typeVersion": 2,
+      "credentials": {
+        "sendGridApi": {
+          "id": "YOUR_SENDGRID_ID",
+          "name": "SendGrid account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE emergency_bookings\nSET\n  status = 'manual_attention',\n  needs_manual_attention = true,\n  last_escalated_at = now(),\n  escalation_history = escalation_history || jsonb_build_object(\n    'escalation_number', escalation_count + 1,\n    'reason', 'no_available_doctor',\n    'timestamp', now(),\n    'max_escalations_reached', true\n  ),\n  updated_at = now()\nWHERE id = '{{ $('Postgres - Lock Row (FOR UPDATE)').item.json.id }}'\n  AND status = 'pending';\n",
+        "options": {}
+      },
+      "id": "ed5d5759-e3bb-428c-b6df-a4889bf6e2fc",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -272,
+        400
+      ],
+      "name": "Postgres - Manual Attention",
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "2eRAPFdxX4jaYMqQ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/YOUR_WEBHOOK_URL",
+        "sendHeaders": true,
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "text",
+              "value": "🚨 Emergency Booking - Manual Attention Required\nBooking ID: {{ $('Postgres - Lock Row (FOR UPDATE)').item.json.id }}\nPatient: {{ $('Postgres - Lock Row (FOR UPDATE)').item.json.patient_id }}\nReason: No available doctors"
+            }
+          ]
+        }
+      },
+      "id": "slack-admin-alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -96,
+        400
+      ],
+      "name": "Slack - Alert Admin",
+      "typeVersion": 4.2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Postgres Trigger - Emergency Booking": {
+      "main": [
+        [
+          {
+            "node": "Wait 2 Minutes (SLA Window)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2 Minutes (SLA Window)": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Lock Row (FOR UPDATE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Lock Row (FOR UPDATE)": {
+      "main": [
+        [
+          {
+            "node": "If - Can Escalate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - Can Escalate?": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Find Alternate Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Postgres - Manual Attention",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Find Alternate Doctor": {
+      "main": [
+        [
+          {
+            "node": "If - Doctor Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - Doctor Found?": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Update Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Postgres - Manual Attention",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Update Booking": {
+      "main": [
+        [
+          {
+            "node": "Postgres - Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Audit Log": {
+      "main": [
+        [
+          {
+            "node": "If - Send WhatsApp?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - Send WhatsApp?": {
+      "main": [
+        [
+          {
+            "node": "Twilio - Call Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twilio - Call Doctor": {
+      "main": [
+        [
+          {
+            "node": "If - Send Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - Send Email?": {
+      "main": [
+        [
+          {
+            "node": "SendGrid - Email Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres - Manual Attention": {
+      "main": [
+        [
+          {
+            "node": "Slack - Alert Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["emergency-booking", "escalation", "preferences"]
+}

@@ -270,7 +270,7 @@ export function PatientDetailsDialog({
               </Avatar>
               <DialogTitle className="text-lg md:text-2xl truncate">{patient.full_name}</DialogTitle>
             </div>
-            <div className="flex flex-wrap gap-2 md:absolute md:top-6 md:right-6 md:flex-nowrap">
+            <div className="flex flex-wrap gap-2 md:absolute md:top-6 md:right-16 md:flex-nowrap">
               <Button
                 onClick={handleStatusChange}
                 disabled={isChangingStatus || !onStatusChange}

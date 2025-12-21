@@ -4,6 +4,7 @@ import { Activity, Target, Eye, Heart, Shield, Users, Sparkles, Award, TrendingU
 import { Link, useNavigate } from "react-router-dom";
 import { usePageTransition } from "@/App";
 import { motion } from "framer-motion";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import mayurPhoto from "@/assets/mayur-photo.jpg";
 
 const animationStyles = `
@@ -112,7 +113,7 @@ const About = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <style>{animationStyles}</style>
       {/* Navigation Bar - Modern Professional Design */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-background/75 backdrop-blur-2xl shadow-lg shadow-primary/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/20 bg-background/85 backdrop-blur-2xl shadow-lg shadow-primary/5">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between py-4 lg:py-5">
             {/* Logo with Enhanced Hover */}
@@ -171,31 +172,34 @@ const About = () => {
               ))}
             </div>
 
-            {/* Get Started Button - Desktop Only with Enhanced Hover */}
-            <Link to="/auth" className="hidden lg:block">
-              <Button 
-                size="sm" 
-                className="relative group bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground border border-primary/50 hover:border-accent/50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 hover:scale-105 active:scale-95 font-semibold px-6"
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Get Started
-                  <span className="inline-block transition-transform duration-500 group-hover:translate-x-1">→</span>
-                </span>
-                <div className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:animate-pulse"></div>
-              </Button>
-            </Link>
+            {/* Theme Toggle & Get Started Button - Desktop Only */}
+            <div className="hidden lg:flex items-center gap-2 lg:gap-3">
+              <ThemeToggle />
+              <Link to="/auth">
+                <Button 
+                  size="sm" 
+                  className="relative group bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground border border-primary/50 hover:border-accent/50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 hover:scale-105 active:scale-95 font-semibold px-6"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Get Started
+                    <span className="inline-block transition-transform duration-500 group-hover:translate-x-1">→</span>
+                  </span>
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:animate-pulse"></div>
+                </Button>
+              </Link>
+            </div>
 
             {/* Mobile Menu Button with Smooth Animation */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2.5 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group"
+              className="md:hidden lg:hidden p-2 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group"
               aria-label="Toggle menu"
             >
               <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               {mobileMenuOpen ? (
-                <X className="h-6 w-6 relative z-10 transition-transform duration-300 rotate-90" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6 relative z-10 transition-transform duration-300 rotate-90" />
               ) : (
-                <Menu className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
+                <Menu className="h-5 w-5 sm:h-6 sm:w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
               )}
             </button>
           </div>
@@ -239,15 +243,18 @@ const About = () => {
                     </Link>
                   ))}
                   
-                  {/* Mobile Get Started Button */}
-                  <Link to="/auth" onClick={() => setMobileMenuOpen(false)} className="pt-2">
-                    <Button 
-                      size="sm" 
-                      className="w-full bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 active:scale-95 font-semibold"
-                    >
-                      Get Started
-                    </Button>
-                  </Link>
+                  {/* Mobile Theme Toggle & Get Started Button */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <ThemeToggle />
+                    <Link to="/auth" onClick={() => setMobileMenuOpen(false)} className="flex-1">
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 active:scale-95 font-semibold"
+                      >
+                        Get Started
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

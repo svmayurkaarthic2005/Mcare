@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Activity, Shield, Sparkles, FileHeart, Pill, Clock, ChevronLeft, ChevronRight, Calendar, MessageSquare, Phone, Linkedin, Users, Heart, Stethoscope, Award, Menu, X } from "lucide-react";
+import { Activity, Shield, Sparkles, FileHeart, Pill, Clock, ChevronLeft, ChevronRight, Calendar, MessageSquare, Phone, Linkedin, Users, Heart, Stethoscope, Award, Menu, X, Mail } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePageTransition } from "@/App";
@@ -47,12 +47,6 @@ const Landing = () => {
       title: "AI Health Assistant",
       description: "Get instant answers to your health questions with our intelligent AI assistant. Available 24/7 to help you understand your medications, symptoms, and health records.",
       gradient: "from-primary to-primary-light"
-    },
-    {
-      icon: <Pill className="h-16 w-16" />,
-      title: "Medication Tracking",
-      description: "Never miss a dose again. Track all your medications, set reminders, and view your complete medication history in one convenient place.",
-      gradient: "from-primary-light to-accent"
     },
     {
       icon: <Calendar className="h-16 w-16" />,
@@ -120,18 +114,18 @@ const Landing = () => {
       {/* Navigation Bar - Modern Professional Design */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-background/75 backdrop-blur-2xl shadow-lg shadow-primary/5">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative flex items-center justify-between py-4 lg:py-5">
+          <div className="relative flex items-center justify-between py-3 lg:py-5 gap-2">
             {/* Logo with Enhanced Hover */}
             <Link
               to="/"
-              className="flex items-center gap-3 group flex-shrink-0"
+              className="flex items-center gap-2 sm:gap-3 group flex-shrink-0"
             >
-              <div className="relative h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-gradient-to-br from-primary via-primary-light to-accent flex items-center justify-center shadow-lg shadow-primary/30 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-primary/50 group-hover:scale-110 group-active:scale-95">
+              <div className="relative h-9 w-9 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-lg bg-gradient-to-br from-primary via-primary-light to-accent flex items-center justify-center shadow-lg shadow-primary/30 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-primary/50 group-hover:scale-110 group-active:scale-95">
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/20 via-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
-                <Activity className="h-6 w-6 lg:h-7 lg:w-7 text-primary-foreground relative z-10" />
+                <Activity className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-primary-foreground relative z-10" />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary-light transition-all duration-500">MCare</h1>
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary-light transition-all duration-500">MCare</h1>
                 <p className="text-xs lg:text-sm text-muted-foreground group-hover:text-primary/80 transition-colors duration-500">Healthcare Platform</p>
               </div>
             </Link>
@@ -164,12 +158,12 @@ const Landing = () => {
             </div>
 
             {/* Theme Toggle & Get Started Button - Desktop Only */}
-            <div className="hidden lg:flex items-center gap-3">
+            <div className="hidden md:flex lg:flex items-center gap-2 lg:gap-3">
               <ThemeToggle />
               <Link to="/auth">
                 <Button
                   size="sm"
-                  className="relative group bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground border border-primary/50 hover:border-accent/50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 hover:scale-105 active:scale-95 font-semibold px-6"
+                  className="relative group bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground border border-primary/50 hover:border-accent/50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 hover:scale-105 active:scale-95 font-semibold px-4 lg:px-6 text-xs sm:text-sm"
                 >
                   <span className="relative z-10 flex items-center gap-2">
                     Get Started
@@ -183,14 +177,14 @@ const Landing = () => {
             {/* Mobile Menu Button with Smooth Animation */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2.5 hover:bg-accent/20 active:bg-accent/30 rounded-xl transition-all duration-300 relative group"
+              className="md:hidden lg:hidden p-2 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group"
               aria-label="Toggle menu"
             >
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               {mobileMenuOpen ? (
-                <X className="h-6 w-6 relative z-10 transition-transform duration-300 rotate-90" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6 relative z-10 transition-transform duration-300 rotate-90" />
               ) : (
-                <Menu className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
+                <Menu className="h-5 w-5 sm:h-6 sm:w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
               )}
             </button>
           </div>
@@ -246,7 +240,7 @@ const Landing = () => {
       </nav>
 
       {/* Hero Section */}
-      <section id="home" className="relative min-h-[75vh] md:min-h-screen flex items-center overflow-hidden pt-16">
+      <section id="home" className="relative min-h-[75vh] md:min-h-screen flex items-center justify-center overflow-hidden pt-12 sm:pt-16">
         {/* Video background - plays on all screen sizes */}
         <video
           autoPlay
@@ -259,30 +253,30 @@ const Landing = () => {
           <source src={doctorVideo} type="video/mp4" />
         </video>
         <div className="absolute inset-0 z-[1] bg-gradient-to-b from-background/40 via-background/20 to-background/40 md:from-background/20 md:via-transparent md:to-background/20" />
-        <div className="container relative z-10 mx-auto px-4 py-20">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
+        <div className="container relative z-10 mx-auto px-3 sm:px-4 py-12 sm:py-20 w-full flex items-center justify-center">
+          <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8 w-full">
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent via-primary-light to-primary drop-shadow-lg">Your Health, </span>
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-light">
                 Connected & Secure
               </span>
             </h1>
 
-            <p className="text-xl md:text-2xl max-w-2xl mx-auto leading-relaxed font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-light">
+            <p className="text-base sm:text-lg md:text-2xl max-w-2xl mx-auto leading-relaxed font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-light">
               Manage your health records, track medications, and get AI-powered health insights—all in one secure platform.
             </p>
 
-            <div className="pt-4 flex justify-center">
+            <div className="pt-2 sm:pt-4 flex justify-center w-full">
               <Link
                 to="/auth"
                 className="group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg inline-block"
               >
-                <div className="relative h-14 rounded-lg overflow-hidden shadow-lg transition-shadow duration-300 group-hover:shadow-xl group-active:shadow-xl">
+                <div className="relative h-12 sm:h-14 rounded-lg overflow-hidden shadow-lg transition-shadow duration-300 group-hover:shadow-xl group-active:shadow-xl">
                   {/* Gradient border wrapper */}
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary to-primary-light opacity-40" />
                   {/* Button surface with slide-up fill */}
-                  <div className="relative z-10 flex h-14 items-center justify-center px-8 rounded-lg ring-1 ring-border text-lg font-medium text-foreground overflow-hidden">
+                  <div className="relative z-10 flex h-12 sm:h-14 items-center justify-center px-6 sm:px-8 rounded-lg ring-1 ring-border text-base sm:text-lg font-medium text-foreground overflow-hidden">
                     {/* Slide-up accent background */}
                     <span className="absolute inset-0 bg-accent origin-bottom scale-y-0 transition-transform duration-500 ease-out group-hover:scale-y-100 group-active:scale-y-100" aria-hidden="true" />
                     {/* Text with color inversion */}
@@ -385,30 +379,30 @@ const Landing = () => {
             <FeatureCard
               id="card-3"
               isVisible={visibleCards["card-3"] || false}
-              icon={<Pill className="h-8 w-8" />}
-              title="Medication Tracker"
-              description="Never miss a dose with smart medication reminders and tracking"
-            />
-            <FeatureCard
-              id="card-4"
-              isVisible={visibleCards["card-4"] || false}
               icon={<FileHeart className="h-8 w-8" />}
               title="Records Management"
               description="Upload, organize, and access your medical records securely from anywhere"
             />
             <FeatureCard
-              id="card-5"
-              isVisible={visibleCards["card-5"] || false}
+              id="card-4"
+              isVisible={visibleCards["card-4"] || false}
               icon={<Shield className="h-8 w-8" />}
               title="HIPAA Compliant"
               description="Your health data is encrypted and protected with industry-leading security"
             />
             <FeatureCard
-              id="card-6"
-              isVisible={visibleCards["card-6"] || false}
+              id="card-5"
+              isVisible={visibleCards["card-5"] || false}
               icon={<Activity className="h-8 w-8" />}
               title="Health Insights"
               description="Get actionable insights from your health data to make informed decisions"
+            />
+            <FeatureCard
+              id="card-6"
+              isVisible={visibleCards["card-6"] || false}
+              icon={<Phone className="h-8 w-8" />}
+              title="WhatsApp Prescription Delivery"
+              description="Receive your prescriptions directly on WhatsApp after your appointment for easy access and quick reference"
             />
           </div>
         </div>
@@ -446,38 +440,96 @@ const Landing = () => {
       </section>
 
       {/* Contact Section */}
-      <section className="py-16 bg-gradient-to-b from-secondary/30 to-background">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <h2 className="text-3xl md:text-4xl font-bold">Get In Touch</h2>
-            <p className="text-lg text-muted-foreground">
-              Have questions? We're here to help
-            </p>
+      <section className="py-20 md:py-32 bg-gradient-to-b from-background via-secondary/10 to-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto text-center space-y-12">
+            {/* Header */}
+            <div className="space-y-4 md:space-y-6">
+              <div className="inline-block">
+                <span className="px-4 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary border border-primary/20">
+                  Get In Touch
+                </span>
+              </div>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                Let's Connect
+              </h2>
+              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Have questions about MCare? Our team is ready to assist you. Reach out through your preferred channel.
+              </p>
+            </div>
 
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center pt-4">
+            {/* Contact Cards */}
+            <div className="flex flex-wrap gap-3 justify-center items-center pt-4 sm:gap-4">
+              {/* WhatsApp Card */}
               <a
+                id="contact-card-1"
+                data-animate-card
                 href="https://wa.me/919445431413"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center gap-3 px-6 py-4 rounded-lg bg-[#25D366] hover:bg-[#20BA5A] text-white transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group relative px-3 py-2 sm:px-6 sm:py-4 rounded-lg bg-gradient-to-br from-[#25D366]/10 via-card to-card border border-[#25D366]/20 hover:border-[#25D366]/50 transition-all duration-500 hover:shadow-lg hover:shadow-[#25D366]/15 hover:-translate-y-0.5 flex items-center gap-2 sm:gap-3 w-auto animate-fade-in-slide-up animate-delay-100"
+                style={{ opacity: 0, transform: 'translateY(30px)' }}
               >
-                <Phone className="h-5 w-5" />
-                <div className="text-left">
-                  <p className="text-sm font-medium">WhatsApp</p>
-                  <p className="text-xs opacity-90">+91 9445431413</p>
+                {/* Gradient background overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#25D366]/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* Content */}
+                <div className="relative z-10 text-left">
+                  <div className="inline-flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-[#25D366]/20 group-hover:bg-[#25D366]/30 transition-colors duration-300 sm:mb-2">
+                    <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-[#25D366]" />
+                  </div>
+                  <div className="hidden sm:block">
+                    <h3 className="text-sm font-bold text-foreground">WhatsApp</h3>
+                    <p className="text-xs text-[#25D366]">+91 9445431413</p>
+                  </div>
                 </div>
               </a>
 
+              {/* LinkedIn Card */}
               <a
+                id="contact-card-2"
+                data-animate-card
                 href="https://www.linkedin.com/in/mayur005"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center gap-3 px-6 py-4 rounded-lg bg-[#0A66C2] hover:bg-[#004182] text-white transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="group relative px-3 py-2 sm:px-6 sm:py-4 rounded-lg bg-gradient-to-br from-[#0A66C2]/10 via-card to-card border border-[#0A66C2]/20 hover:border-[#0A66C2]/50 transition-all duration-500 hover:shadow-lg hover:shadow-[#0A66C2]/15 hover:-translate-y-0.5 flex items-center gap-2 sm:gap-3 w-auto animate-fade-in-slide-up animate-delay-200"
+                style={{ opacity: 0, transform: 'translateY(30px)' }}
               >
-                <Linkedin className="h-5 w-5" />
-                <div className="text-left">
-                  <p className="text-sm font-medium">LinkedIn</p>
-                  <p className="text-xs opacity-90">Connect with us</p>
+                {/* Gradient background overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#0A66C2]/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* Content */}
+                <div className="relative z-10 text-left">
+                  <div className="inline-flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-[#0A66C2]/20 group-hover:bg-[#0A66C2]/30 transition-colors duration-300 sm:mb-2">
+                    <Linkedin className="h-4 w-4 sm:h-5 sm:w-5 text-[#0A66C2]" />
+                  </div>
+                  <div className="hidden sm:block">
+                    <h3 className="text-sm font-bold text-foreground">LinkedIn</h3>
+                    <p className="text-xs text-[#0A66C2]">Connect with us</p>
+                  </div>
+                </div>
+              </a>
+
+              {/* Gmail Card */}
+              <a
+                id="contact-card-3"
+                data-animate-card
+                href="mailto:svmayurkaarthic@gmail.com"
+                className="group relative px-3 py-2 sm:px-6 sm:py-4 rounded-lg bg-gradient-to-br from-[#EA4335]/10 via-card to-card border border-[#EA4335]/20 hover:border-[#EA4335]/50 transition-all duration-500 hover:shadow-lg hover:shadow-[#EA4335]/15 hover:-translate-y-0.5 flex items-center gap-2 sm:gap-3 w-auto animate-fade-in-slide-up animate-delay-300"
+                style={{ opacity: 0, transform: 'translateY(30px)' }}
+              >
+                {/* Gradient background overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#EA4335]/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* Content */}
+                <div className="relative z-10 text-left">
+                  <div className="inline-flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-[#EA4335]/20 group-hover:bg-[#EA4335]/30 transition-colors duration-300 sm:mb-2">
+                    <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-[#EA4335]" />
+                  </div>
+                  <div className="hidden sm:block">
+                    <h3 className="text-sm font-bold text-foreground">Email</h3>
+                    <p className="text-xs text-[#EA4335]">svmayurkaarthic@gmail.com</p>
+                  </div>
                 </div>
               </a>
             </div>

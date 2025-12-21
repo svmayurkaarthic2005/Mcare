@@ -1,78 +1,80 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.58.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
-};
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+}
 
-Deno.serve(async (req: Request) => {
+Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
+    // 1️⃣ Read Authorization header safely
+    const authHeader = req.headers.get('Authorization')
+
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: corsHeaders }
+      )
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    // 2️⃣ Create ANON client to validate user
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+        auth: { persistSession: false },
+      }
+    )
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    // 3️⃣ Get logged-in user
+    const { data: { user }, error: authError } =
+      await supabase.auth.getUser()
 
-    if (userError || !user) {
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Invalid token or user not found' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: corsHeaders }
+      )
     }
 
-    const userId = user.id;
+    // 4️⃣ Create ADMIN client
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { persistSession: false } }
+    )
 
-    const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId);
+    // 5️⃣ Delete user
+    const { error: deleteError } =
+      await admin.auth.admin.deleteUser(user.id)
 
     if (deleteError) {
-      console.error('Error deleting user:', deleteError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete account' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      console.error('Delete error:', deleteError)
+      throw deleteError
     }
 
+    // 6️⃣ Success response
     return new Response(
-      JSON.stringify({ success: true, message: 'Account deleted successfully' }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    console.error('Error in delete-account function:', error);
+      JSON.stringify({ success: true, message: 'Account deleted' }),
+      { status: 200, headers: corsHeaders }
+    )
+
+  } catch (err) {
+    console.error('Delete account error:', err)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+      JSON.stringify({ error: 'Failed to delete account' }),
+      { status: 500, headers: corsHeaders }
+    )
   }
-});
+})

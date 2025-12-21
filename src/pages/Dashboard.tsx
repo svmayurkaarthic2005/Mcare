@@ -77,15 +77,50 @@ const Dashboard = ({ showChat = false }: DashboardProps) => {
         setUser(currentSession.user);
         setSession(currentSession);
 
-        const { data: roleData, error: roleError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", currentSession.user.id)
-          .single();
+        let roleData = null;
+        let roleError = null;
+        let retries = 3;
 
-        if (roleError) {
+        // Retry fetching role if it doesn't exist yet (might be a timing issue)
+        while (retries > 0 && !roleData) {
+          const response = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", currentSession.user.id);
+
+          if (response.error) {
+            roleError = response.error;
+            if (retries > 1) {
+              // Wait 1 second before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+            } else {
+              retries = 0;
+            }
+          } else if (response.data && response.data.length > 0) {
+            roleData = response.data[0];
+            retries = 0;
+          } else {
+            if (retries > 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+            } else {
+              retries = 0;
+            }
+          }
+        }
+
+        if (roleError && !roleData) {
           console.error("Error fetching user role:", roleError);
           toast.error("Could not verify user role.");
+          setLoading(false);
+          await supabase.auth.signOut();
+          return;
+        }
+
+        if (!roleData) {
+          console.error("No role found for user after retries");
+          toast.error("Account setup incomplete. Please refresh the page.");
           setLoading(false);
           await supabase.auth.signOut();
           return;
@@ -275,9 +310,9 @@ const Dashboard = ({ showChat = false }: DashboardProps) => {
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/20 via-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
                 <Activity className="h-7 w-7 text-primary-foreground relative z-10" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">MCare</h1>
-                <p className="text-sm text-muted-foreground">Your Health Dashboard</p>
+              <div className="hidden sm:block">
+                <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">MCare</h1>
+                <p className="text-xs lg:text-sm text-muted-foreground">Your Health Dashboard</p>
               </div>
             </div>
 

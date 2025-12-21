@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Activity, Sparkles, Pill, Clock, FileHeart, Shield, Calendar, MessageSquare, Users, Stethoscope, HeartPulse, Brain, Menu, X } from "lucide-react";
+import { Activity, Sparkles, Pill, Clock, FileHeart, Shield, Calendar, MessageSquare, Users, Stethoscope, HeartPulse, Brain, Menu, X, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { usePageTransition } from "@/App";
 import { motion } from "framer-motion";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import serviceVideo from "@/assets/service.mp4";
 
 const animationStyles = `
@@ -71,16 +72,16 @@ const Services = () => {
       gradient: "from-primary-light to-accent"
     },
     {
-      icon: <Pill className="h-12 w-12" />,
-      title: "Medication Tracking",
-      description: "Never miss a dose with smart medication reminders and comprehensive tracking. Manage all your medications, dosages, and schedules in one place.",
+      icon: <AlertCircle className="h-12 w-12" />,
+      title: "24/7 Emergency Support",
+      description: "Critical health issues require immediate attention. Access emergency booking with our 24-hour emergency support team. Select your preferred doctor or we'll arrange a specialist of the same specialization.",
       features: [
-        "Smart dose reminders",
-        "Medication history",
-        "Refill notifications",
-        "Drug interaction alerts"
+        "24/7 emergency availability",
+        "Select preferred doctor",
+        "Specialist matching",
+        "Instant doctor arrangement"
       ],
-      gradient: "from-accent to-primary"
+      gradient: "from-destructive to-primary"
     },
     {
       icon: <FileHeart className="h-12 w-12" />,
@@ -196,18 +197,18 @@ const Services = () => {
       {/* Navigation Bar - Modern Professional Design */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/30 bg-background/75 backdrop-blur-2xl shadow-lg shadow-primary/5">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative flex items-center justify-between py-4 lg:py-5">
+          <div className="relative flex items-center justify-between py-3 lg:py-5 gap-2">
             {/* Logo with Enhanced Hover */}
             <Link 
               to="/" 
-              className="flex items-center gap-3 group flex-shrink-0"
+              className="flex items-center gap-2 sm:gap-3 group flex-shrink-0"
             >
-              <div className="relative h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-gradient-to-br from-primary via-primary-light to-accent flex items-center justify-center shadow-lg shadow-primary/30 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-primary/50 group-hover:scale-110 group-active:scale-95">
+              <div className="relative h-9 w-9 sm:h-10 sm:w-10 lg:h-12 lg:w-12 rounded-lg bg-gradient-to-br from-primary via-primary-light to-accent flex items-center justify-center shadow-lg shadow-primary/30 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-primary/50 group-hover:scale-110 group-active:scale-95">
                 <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/20 via-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
-                <Activity className="h-6 w-6 lg:h-7 lg:w-7 text-primary-foreground relative z-10" />
+                <Activity className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 text-primary-foreground relative z-10" />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary-light transition-all duration-500">MCare</h1>
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary-light transition-all duration-500">MCare</h1>
                 <p className="text-xs lg:text-sm text-muted-foreground group-hover:text-primary/80 transition-colors duration-500">Healthcare Platform</p>
               </div>
             </Link>
@@ -253,31 +254,34 @@ const Services = () => {
               ))}
             </div>
 
-            {/* Get Started Button - Desktop Only with Enhanced Hover */}
-            <Link to="/auth" className="hidden lg:block">
-              <Button 
-                size="sm" 
-                className="relative group bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground border border-primary/50 hover:border-accent/50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 hover:scale-105 active:scale-95 font-semibold px-6"
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Get Started
-                  <span className="inline-block transition-transform duration-500 group-hover:translate-x-1">→</span>
-                </span>
-                <div className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:animate-pulse"></div>
-              </Button>
-            </Link>
+            {/* Theme Toggle & Get Started Button - Desktop Only */}
+            <div className="hidden md:flex lg:flex items-center gap-2 lg:gap-3">
+              <ThemeToggle />
+              <Link to="/auth">
+                <Button 
+                  size="sm" 
+                  className="relative group bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground border border-primary/50 hover:border-accent/50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 hover:scale-105 active:scale-95 font-semibold px-4 lg:px-6 text-xs sm:text-sm"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Get Started
+                    <span className="inline-block transition-transform duration-500 group-hover:translate-x-1">→</span>
+                  </span>
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:animate-pulse"></div>
+                </Button>
+              </Link>
+            </div>
 
             {/* Mobile Menu Button with Smooth Animation */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2.5 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group"
+              className="md:hidden lg:hidden p-2 hover:bg-accent/20 active:bg-accent/30 rounded-lg transition-all duration-300 relative group"
               aria-label="Toggle menu"
             >
               <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               {mobileMenuOpen ? (
-                <X className="h-6 w-6 relative z-10 transition-transform duration-300 rotate-90" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6 relative z-10 transition-transform duration-300 rotate-90" />
               ) : (
-                <Menu className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
+                <Menu className="h-5 w-5 sm:h-6 sm:w-6 relative z-10 transition-transform duration-300 group-hover:rotate-180" />
               )}
             </button>
           </div>
@@ -321,15 +325,18 @@ const Services = () => {
                     </Link>
                   ))}
                   
-                  {/* Mobile Get Started Button */}
-                  <Link to="/auth" onClick={() => setMobileMenuOpen(false)} className="pt-2">
-                    <Button 
-                      size="sm" 
-                      className="w-full bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 active:scale-95 font-semibold"
-                    >
-                      Get Started
-                    </Button>
-                  </Link>
+                  {/* Mobile Theme Toggle & Get Started Button */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <ThemeToggle />
+                    <Link to="/auth" onClick={() => setMobileMenuOpen(false)} className="flex-1">
+                      <Button 
+                        size="sm" 
+                        className="w-full bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-accent text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-500 active:scale-95 font-semibold"
+                      >
+                        Get Started
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

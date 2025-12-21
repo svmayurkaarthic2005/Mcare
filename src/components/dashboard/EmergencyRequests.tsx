@@ -153,51 +153,28 @@ export const EmergencyRequests = ({ doctorId }: EmergencyRequestsProps) => {
 
       console.log("Booking data:", bookingData);
 
-      // Update emergency booking status
+      // Set scheduled date to now + 1 hour for the emergency appointment
+      const appointmentDate = new Date();
+      appointmentDate.setHours(appointmentDate.getHours() + 1);
+      const scheduledDate = appointmentDate.toISOString();
+      
+      console.log("Current time:", new Date().toISOString());
+      console.log("Scheduled appointment time:", scheduledDate);
+
+      // Update emergency booking status and scheduled date (DO NOT create in appointments table)
       const { error: updateError } = await (supabase as any)
         .from("emergency_bookings")
         .update({
           status: "approved",
           responded_at: new Date().toISOString(),
+          scheduled_date: scheduledDate,
           doctor_notes: doctorNotes,
         })
         .eq("id", requestId);
 
       if (updateError) throw updateError;
-
-      // Create appointment record for doctor's history
-      // Set appointment date to now + 1 hour (emergency appointment scheduled immediately)
-      const appointmentDate = new Date();
-      appointmentDate.setHours(appointmentDate.getHours() + 1);
       
-      // Ensure appointment date is valid and in the future
-      const scheduledDate = appointmentDate.toISOString();
-      console.log("Current time:", new Date().toISOString());
-      console.log("Scheduled appointment time:", scheduledDate);
-
-      const appointmentData = {
-        patient_id: bookingData.patient_id,
-        doctor_id: bookingData.doctor_id,
-        appointment_date: scheduledDate,
-        status: "approved",
-        reason: bookingData.reason,
-        notes: `Emergency - ${bookingData.urgency_level.toUpperCase()} | Original Request: ${bookingData.reason}`,
-        created_at: new Date().toISOString(),
-      };
-
-      console.log("Creating appointment with data:", appointmentData);
-
-      const { data: createdAppointment, error: appointmentError } = await (supabase as any)
-        .from("appointments")
-        .insert([appointmentData])
-        .select();
-
-      if (appointmentError) {
-        console.error("Error creating appointment:", appointmentError);
-        throw appointmentError;
-      }
-
-      console.log("Appointment created:", createdAppointment);
+      console.log("Emergency booking approved with scheduled date:", scheduledDate);
 
       toast.success("Emergency booking approved! Appointment scheduled.");
       setShowDetailDialog(false);
@@ -285,17 +262,17 @@ export const EmergencyRequests = ({ doctorId }: EmergencyRequestsProps) => {
                 {requests.map((request) => (
                   <Card
                     key={request.id}
-                    className="p-4 border-primary/10 hover:shadow-md transition-all cursor-pointer"
+                    className="p-3 sm:p-4 border-primary/10 hover:shadow-md transition-all cursor-pointer"
                     onClick={() => {
                       setSelectedRequest(request);
                       setDoctorNotes(request.doctor_notes || "");
                       setShowDetailDialog(true);
                     }}
                   >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm">
+                          <p className="font-semibold text-xs sm:text-sm">
                             {request.patient_name || "Patient"}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
@@ -309,14 +286,14 @@ export const EmergencyRequests = ({ doctorId }: EmergencyRequestsProps) => {
                         </div>
                       </div>
 
-                      <p className="text-sm line-clamp-2 text-gray-900 font-medium">
+                      <p className="text-xs sm:text-sm line-clamp-2 text-gray-900 font-medium">
                         {request.reason}
                       </p>
 
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          <span>
+                          <span className="truncate">
                             {formatDistanceToNow(new Date(request.requested_at), {
                               addSuffix: true,
                             })}
@@ -324,10 +301,10 @@ export const EmergencyRequests = ({ doctorId }: EmergencyRequestsProps) => {
                         </div>
                       </div>
 
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex flex-col sm:flex-row gap-2 pt-2 w-full">
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700 flex-1"
+                          className="bg-green-600 hover:bg-green-700 flex-1 text-xs sm:text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedRequest(request);
@@ -341,7 +318,7 @@ export const EmergencyRequests = ({ doctorId }: EmergencyRequestsProps) => {
                         <Button
                           size="sm"
                           variant="destructive"
-                          className="flex-1"
+                          className="flex-1 text-xs sm:text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedRequest(request);

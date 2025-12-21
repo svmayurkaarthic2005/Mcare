@@ -78,6 +78,9 @@ export type Database = {
           reason: string | null
           status: string
           updated_at: string
+          consultation_type?: string
+          meeting_url?: string | null
+          meeting_password?: string | null
         }
         Insert: {
           appointment_date: string
@@ -89,6 +92,9 @@ export type Database = {
           reason?: string | null
           status?: string
           updated_at?: string
+          consultation_type?: string
+          meeting_url?: string | null
+          meeting_password?: string | null
         }
         Update: {
           appointment_date?: string
@@ -100,6 +106,9 @@ export type Database = {
           reason?: string | null
           status?: string
           updated_at?: string
+          consultation_type?: string
+          meeting_url?: string | null
+          meeting_password?: string | null
         }
         Relationships: []
       }
@@ -118,6 +127,11 @@ export type Database = {
           scheduled_date: string | null
           created_at: string | null
           updated_at: string | null
+          escalation_count: number
+          needs_manual_attention: boolean
+          last_escalated_at: string | null
+          escalation_history: any
+          contact_number?: string | null
         }
         Insert: {
           id?: string
@@ -133,6 +147,11 @@ export type Database = {
           scheduled_date?: string | null
           created_at?: string | null
           updated_at?: string | null
+          escalation_count?: number
+          needs_manual_attention?: boolean
+          last_escalated_at?: string | null
+          escalation_history?: any
+          contact_number?: string | null
         }
         Update: {
           id?: string
@@ -148,6 +167,11 @@ export type Database = {
           scheduled_date?: string | null
           created_at?: string | null
           updated_at?: string | null
+          escalation_count?: number
+          needs_manual_attention?: boolean
+          last_escalated_at?: string | null
+          escalation_history?: any
+          contact_number?: string | null
         }
         Relationships: []
       }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const CHAT_CSS = `
   :root {
@@ -102,13 +103,28 @@ export const useN8nChat = () => {
   useEffect(() => {
     const initializeChat = async () => {
       try {
+        // Check if user is authenticated before initializing chat
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          console.log('No authenticated session found, skipping n8n chat initialization');
+          // Hide chat if it exists
+          hideChat();
+          return;
+        }
+
         // Import the createChat function dynamically
         // @ts-ignore - External CDN module
         const { createChat } = await import('https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js');
         
+        // Use local n8n for development, remote for production
+        const webhookUrl = import.meta.env.DEV 
+          ? 'http://localhost:5678/webhook/91e16669-c4a9-4c40-b5da-2e0bf5d76a97/chat'
+          : 'https://n8n-9aim.onrender.com/webhook/91e16669-c4a9-4c40-b5da-2e0bf5d76a97/chat';
+        
         // Initialize n8n chat with Mayur as agent name and theme colors
         window.n8nChatInstance = createChat({
-          webhookUrl: 'https://n8n-9aim.onrender.com/webhook/91e16669-c4a9-4c40-b5da-2e0bf5d76a97/chat',
+          webhookUrl: webhookUrl,
           initialMessages: [
             'Hi there! 👋',
             'My name is Mayur. How can I assist you today?'
@@ -124,7 +140,7 @@ export const useN8nChat = () => {
           }
         });
         
-        console.log('✅ n8n chat widget initialized with Mayur as agent');
+        console.log(`✅ n8n chat widget initialized with Mayur as agent (${import.meta.env.DEV ? 'local' : 'remote'})`);
         
         // Inject CSS into iframe after chat loads
         const injectCSS = () => {
@@ -166,8 +182,46 @@ export const useN8nChat = () => {
       }
     };
 
+    // Listen for auth state changes to control chat visibility
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        hideChat();
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        // Re-initialize chat on sign in
+        initializeChat();
+      }
+    });
+
     initializeChat();
+
+    return () => {
+      if (authListener?.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+    };
   }, []);
+};
+
+// Helper function to hide n8n chat
+const hideChat = () => {
+  const chatButton = document.querySelector('[class*="toggle"]');
+  const chatContainer = document.querySelector('.n8n-chat');
+  
+  if (chatButton) {
+    (chatButton as HTMLElement).style.display = 'none';
+  }
+  if (chatContainer) {
+    (chatContainer as HTMLElement).style.display = 'none';
+  }
+  
+  // Also destroy instance if it exists
+  if (window.n8nChatInstance) {
+    try {
+      window.n8nChatInstance.close?.();
+    } catch (e) {
+      console.warn('Could not close chat instance:', e);
+    }
+  }
 };
 
 declare global {

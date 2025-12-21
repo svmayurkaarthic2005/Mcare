@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Activity, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { SignupDebugPanel } from "@/components/debug/SignupDebugPanel";
+import { OTPVerificationDialog } from "@/components/auth/OTPVerificationDialog";
 
 type UserRole = "patient" | "doctor" | "admin";
 
@@ -19,6 +20,12 @@ const Auth = () => {
   const [signupStep, setSignupStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  // OTP verification state
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
 
   // Basic auth fields
   const [email, setEmail] = useState("");
@@ -208,7 +215,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Step 1: Create the user in auth.users
+      // Step 1: Create user with password (this will trigger OTP email)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -234,9 +241,100 @@ const Auth = () => {
       }
 
       const userId = signUpData.user.id;
+      console.log("[Auth] User created, waiting for OTP verification...", userId);
 
-      // Update auth user metadata with display name
-      console.log("[Auth] Updating user metadata with display name...");
+      setLoading(false);
+      toast.success("Account created! Verify your email with the OTP code.");
+
+      // Show OTP verification dialog
+      setOtpEmail(email);
+      setPendingUserId(userId);
+      setPendingRole(role);
+      setShowOTPDialog(true);
+      
+      // Store signup data temporarily for profile creation after OTP
+      sessionStorage.setItem('pendingSignupData', JSON.stringify({
+        userId,
+        email,
+        password,
+        fullName,
+        phone,
+        role,
+        dateOfBirth,
+        gender,
+        bloodType,
+        emergencyContact,
+        allergies,
+        chronicConditions,
+        specialization,
+        licenseNumber,
+        hospitalAffiliation,
+      }));
+    } catch (error: any) {
+      setLoading(false);
+      console.error("Signup error:", error);
+      toast.error(`An error occurred: ${error.message || "Please try again"}`);
+    }
+  };
+
+  const handleOTPVerificationSuccess = async () => {
+    if (!pendingUserId || !pendingRole) {
+      toast.error("Session error. Please try signing up again.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Retrieve pending signup data
+      const pendingDataStr = sessionStorage.getItem('pendingSignupData');
+      if (!pendingDataStr) {
+        console.error("No pending signup data found");
+        toast.error("Session expired. Please sign up again.");
+        setShowOTPDialog(false);
+        resetForm();
+        setLoading(false);
+        return;
+      }
+
+      const pendingData = JSON.parse(pendingDataStr);
+      const {
+        userId,
+        fullName,
+        phone,
+        role,
+        dateOfBirth,
+        gender,
+        bloodType,
+        emergencyContact,
+        allergies,
+        chronicConditions,
+        specialization,
+        licenseNumber,
+        hospitalAffiliation,
+      } = pendingData;
+
+      console.log("[OTP Success] Creating profile for verified user:", userId);
+
+      // FIRST: Sign in to create a session
+      console.log("[Auth] Signing in user...");
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: otpEmail,
+        password: pendingData.password
+      });
+
+      if (signInError) {
+        console.error("Signin error after OTP:", signInError);
+        toast.error("Email verified! Please sign in with your credentials.");
+        setShowOTPDialog(false);
+        resetForm();
+        setLoading(false);
+        return;
+      }
+
+      console.log("[Auth] User signed in, now updating metadata");
+
+      // Now we have a session, update metadata
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           full_name: fullName.trim(),
@@ -245,38 +343,36 @@ const Auth = () => {
 
       if (metadataError) {
         console.error("[Auth] Error updating user metadata:", metadataError);
-        // Don't fail signup if metadata update fails, just log it
+        // Don't fail, just log it
       } else {
         console.log("[Auth] User metadata updated successfully");
       }
 
-      // Profile data - to be inserted or updated
+      // Profile data
       const profileData = {
         id: userId,
         full_name: fullName.trim(),
-        email: email,
+        email: otpEmail,
         phone: phone.trim() || null,
         date_of_birth: role === "patient" ? dateOfBirth : null,
         gender: role === "patient" ? gender : null,
         blood_type: role === "patient" ? bloodType : null,
         emergency_contact: role === "patient" ? emergencyContact.trim() : null,
-        allergies: role === "patient" ? allergies.split(',').map(s => s.trim()).filter(Boolean) : null,
-        chronic_conditions: role === "patient" ? chronicConditions.split(',').map(s => s.trim()).filter(Boolean) : null,
+        allergies: role === "patient" ? allergies.split(',').map((s: string) => s.trim()).filter(Boolean) : null,
+        chronic_conditions: role === "patient" ? chronicConditions.split(',').map((s: string) => s.trim()).filter(Boolean) : null,
       };
 
-      // Always try to create profile first, then fallback to update if it already exists
-      // (The on_auth_user_created trigger may have already created an incomplete profile)
+      // Create profile
       console.log("[Auth] Creating profile for user:", userId);
-
       const { error: insertError } = await supabase
         .from('profiles')
         .insert([profileData]);
 
       let profileError = insertError;
 
-      // If insert fails with duplicate key (profile already exists from trigger), update it instead
+      // If insert fails with duplicate key, update it instead
       if (insertError && insertError.code === '23505') {
-        console.log("[Auth] Profile already exists, updating instead:", userId);
+        console.log("[Auth] Profile already exists, updating:", userId);
         const { error: updateError } = await supabase
           .from('profiles')
           .update(profileData)
@@ -285,26 +381,27 @@ const Auth = () => {
       }
 
       if (profileError && profileError.code !== '23505') {
-        setLoading(false);
         console.error("Profile creation/update error:", profileError);
         toast.error(`Failed to create profile: ${profileError.message}`);
+        setLoading(false);
         return;
       }
 
       console.log("[Auth] Profile created/updated successfully");
 
-      // Role assignment
-      console.log("[Auth] Assigning role:", role);
-
-      const { error: roleError } = await supabase
+      // Assign role
+      console.log("[Auth] Assigning role:", role, "to user:", userId);
+      const { data: roleInsertData, error: roleError } = await supabase
         .from('user_roles')
-        .insert([{ user_id: userId, role: role }]);
+        .insert([{ user_id: userId, role: role }])
+        .select();
 
-      // Ignore conflicts (role already exists)
+      console.log("[Auth] Role insert response:", { data: roleInsertData, error: roleError });
+
       if (roleError && roleError.code !== '23505') {
-        setLoading(false);
         console.error("Role assignment error:", roleError);
         toast.error(`Failed to assign role: ${roleError.message}`);
+        setLoading(false);
         return;
       }
 
@@ -321,140 +418,67 @@ const Auth = () => {
           hospital_affiliation: hospitalAffiliation.trim() || null,
         };
 
-        // Try to insert, fallback to update if exists (trigger may have created it)
         const { error: doctorInsertError } = await supabase
           .from('doctor_profiles')
           .insert([doctorProfileData]);
 
         if (doctorInsertError && doctorInsertError.code === '23505') {
-          // Profile already exists (from trigger), update it
-          console.log("[Auth] Doctor profile already exists, updating:", userId);
           const { error: doctorUpdateError } = await supabase
             .from('doctor_profiles')
             .update(doctorProfileData)
             .eq('user_id', userId);
 
           if (doctorUpdateError) {
-            setLoading(false);
             console.error("Doctor profile update error:", doctorUpdateError);
             toast.error(`Failed to update doctor profile: ${doctorUpdateError.message}`);
+            setLoading(false);
             return;
           }
         } else if (doctorInsertError) {
-          // Unexpected error
-          setLoading(false);
           console.error("Doctor profile creation error:", doctorInsertError);
           toast.error(`Failed to create doctor profile: ${doctorInsertError.message}`);
+          setLoading(false);
           return;
         }
 
         console.log("[Auth] Doctor profile created/updated successfully");
       }
 
-      setLoading(false);
-      toast.success("Account created successfully! Signing in...");
+      // Clear pending signup data
+      sessionStorage.removeItem('pendingSignupData');
 
-      // Add a small delay to ensure all data is committed to database
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Auto-sign in after successful signup
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (signInError) {
-        console.error("Auto-signin error:", signInError);
-        toast.info("Account created! Please sign in with your credentials.");
-        resetForm();
-        return;
-      }
-
-      const sessionUserId = signInData?.user?.id;
-      if (!sessionUserId) {
-        console.error("No user ID after signin");
-        toast.error("Signin failed. Please try again.");
-        resetForm();
-        return;
-      }
-
-      // Verify role was assigned before navigating
-      console.log("Checking role for user:", sessionUserId);
+      // Verify role was assigned
+      console.log("[Auth] Verifying role was assigned for user:", userId);
       const { data: roleVerify, error: roleVerifyError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', sessionUserId);
+        .eq('user_id', userId);
+
+      console.log("[Auth] Role verify response:", { data: roleVerify, error: roleVerifyError });
 
       if (roleVerifyError) {
-        console.error("Error checking role:", roleVerifyError);
-        // Retry once more
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const { data: roleRetry } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sessionUserId);
-
-        if (!roleRetry || roleRetry.length === 0) {
-          console.error("Role still not found after retry");
-          toast.error("Account setup incomplete. Please refresh and try again.");
-          await supabase.auth.signOut();
-          resetForm();
-          return;
-        }
-
-        const assignedRole = roleRetry[0].role;
-        if (assignedRole === 'doctor') {
-          navigate('/doctor-dashboard');
-        } else {
-          navigate('/dashboard');
-        }
-        return;
+        console.error("Role verification error:", roleVerifyError);
       }
 
       if (!roleVerify || roleVerify.length === 0) {
-        console.error("Role not found after signup");
-        // Try to infer role from request or assign default
-        console.log("Attempting to assign role based on signup form...");
-
-        // Assign based on what the user selected during signup
-        const { error: assignError } = await supabase
-          .from('user_roles')
-          .insert([{ user_id: sessionUserId, role: role }]);
-
-        if (assignError) {
-          console.error("Failed to assign role:", assignError);
-          toast.error("Account setup incomplete. Please contact support.");
-          await supabase.auth.signOut();
-          resetForm();
-          return;
-        }
-
-        // Check again
-        const { data: roleRetry2 } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sessionUserId);
-
-        if (!roleRetry2 || roleRetry2.length === 0) {
-          console.error("Role assignment failed");
-          toast.error("Failed to set up account role.");
-          await supabase.auth.signOut();
-          resetForm();
-          return;
-        }
-
-        const assignedRole = roleRetry2[0].role;
-        if (assignedRole === 'doctor') {
-          navigate('/doctor-dashboard');
-        } else {
-          navigate('/dashboard');
-        }
+        console.error("Role not found after OTP verification - roleVerify:", roleVerify);
+        toast.error("Account setup incomplete. Please refresh and try again.");
+        setShowOTPDialog(false);
+        resetForm();
+        setLoading(false);
         return;
       }
 
-      // Navigate based on role
       const assignedRole = roleVerify[0].role;
       console.log("User role confirmed:", assignedRole);
+
+      setShowOTPDialog(false);
+      setLoading(false);
+      resetForm();
+
+      toast.success("Email verified!");
+
+      // User is already signed in from earlier, just navigate
       if (assignedRole === 'doctor') {
         navigate('/doctor-dashboard');
       } else {
@@ -462,7 +486,7 @@ const Auth = () => {
       }
     } catch (error: any) {
       setLoading(false);
-      console.error("Signup error:", error);
+      console.error("OTP verification success handler error:", error);
       toast.error(`An error occurred: ${error.message || "Please try again"}`);
     }
   };
@@ -833,6 +857,17 @@ const Auth = () => {
           </>
         )}
       </Card>
+
+      {/* OTP Verification Dialog */}
+      <OTPVerificationDialog
+        open={showOTPDialog}
+        email={otpEmail}
+        onVerificationSuccess={handleOTPVerificationSuccess}
+        onClose={() => {
+          setShowOTPDialog(false);
+          resetForm();
+        }}
+      />
 
       {/* Debug Panel - Accessible via Ctrl+Shift+D */}
       {showDebugPanel && (

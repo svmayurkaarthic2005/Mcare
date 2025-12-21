@@ -167,6 +167,17 @@ export const PatientAppointments = ({ patientId }: { patientId: string }) => {
       // Filter to show only pending emergency bookings (approved ones go to history)
       const pendingEmergencyData = emergencyData?.filter((eb: any) => eb.status === "pending") || [];
 
+      console.log("[PatientAppointments] Emergency bookings fetched:", {
+        total: emergencyData?.length || 0,
+        pending: pendingEmergencyData.length,
+        data: emergencyData?.map((eb: any) => ({
+          id: eb.id,
+          status: eb.status,
+          requested_at: eb.requested_at,
+          scheduled_date: eb.scheduled_date
+        }))
+      });
+
       // Filter emergency bookings by time - don't show if already passed
       // Use scheduled_date if available, otherwise use responded_at or requested_at
       const validPendingEmergency = pendingEmergencyData.filter((eb: any) => {
@@ -363,7 +374,9 @@ export const PatientAppointments = ({ patientId }: { patientId: string }) => {
                     const isPending = status === "pending";
                     const isApproved = status === "approved";
                     const isEmergency = 'isEmergency' in apt && apt.isEmergency;
-                    const canCancel = isPending || (isApproved && !hasAppointmentPassed(apt.appointment_date));
+                    // For emergency bookings: only show cancel when pending
+                    // For regular appointments: show cancel when pending or approved (if not passed)
+                    const canCancel = isPending || (!isEmergency && isApproved && !hasAppointmentPassed(apt.appointment_date));
                     
                     return (
                       <TableRow key={apt.id} className={isEmergency ? "bg-red-50/50 dark:bg-red-950/20" : ""}>
@@ -384,21 +397,23 @@ export const PatientAppointments = ({ patientId }: { patientId: string }) => {
                         <TableCell>
                           {getStatusBadge(apt.status, isEmergency, 'urgency_level' in apt ? apt.urgency_level : undefined)}
                         </TableCell>
-                        <TableCell>
-                          {canCancel ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => cancelAppointment(apt.id, apt.appointment_date)}
-                              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                            >
-                              Cancel
-                            </Button>
-                          ) : hasAppointmentPassed(apt.appointment_date) && isApproved ? (
-                            <Badge variant="outline">Time Passed</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
+                        <TableCell className="p-2">
+                          <div className="flex">
+                            {canCancel ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => cancelAppointment(apt.id, apt.appointment_date)}
+                                className="h-7 px-3 text-xs border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors whitespace-nowrap"
+                              >
+                                Cancel
+                              </Button>
+                            ) : hasAppointmentPassed(apt.appointment_date) && isApproved ? (
+                              <Badge variant="outline" className="whitespace-nowrap">Time Passed</Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -414,7 +429,9 @@ export const PatientAppointments = ({ patientId }: { patientId: string }) => {
                 const isPending = status === "pending";
                 const isApproved = status === "approved";
                 const isEmergency = 'isEmergency' in apt && apt.isEmergency;
-                const canCancel = isPending || (isApproved && !hasAppointmentPassed(apt.appointment_date));
+                // For emergency bookings: only show cancel when pending
+                // For regular appointments: show cancel when pending or approved (if not passed)
+                const canCancel = isPending || (!isEmergency && isApproved && !hasAppointmentPassed(apt.appointment_date));
                 
                 return (
                   <Card key={apt.id} className={`p-4 border-primary/20 ${isEmergency ? "border-red-400 bg-red-50/50 dark:bg-red-950/20" : ""}`}>
@@ -444,13 +461,13 @@ export const PatientAppointments = ({ patientId }: { patientId: string }) => {
                         </div>
                       )}
 
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex justify-end gap-2 pt-2">
                         {canCancel ? (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => cancelAppointment(apt.id, apt.appointment_date)}
-                            className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                            className="w-full sm:w-auto flex-none h-8 sm:h-8 px-3 text-xs border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
                           >
                             Cancel
                           </Button>
