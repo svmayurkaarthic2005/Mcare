@@ -26,12 +26,12 @@ const animationStyles = `
     animation: fadeInSlideUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
   }
 
-  [data-animate-card].animate-delay-100 { animation-delay: 0.05s; }
-  [data-animate-card].animate-delay-200 { animation-delay: 0.1s; }
-  [data-animate-card].animate-delay-300 { animation-delay: 0.15s; }
-  [data-animate-card].animate-delay-400 { animation-delay: 0.2s; }
-  [data-animate-card].animate-delay-500 { animation-delay: 0.25s; }
-  [data-animate-card].animate-delay-600 { animation-delay: 0.3s; }
+  .animate-delay-100 { animation-delay: 0.05s; }
+  .animate-delay-200 { animation-delay: 0.1s; }
+  .animate-delay-300 { animation-delay: 0.15s; }
+  .animate-delay-400 { animation-delay: 0.2s; }
+  .animate-delay-500 { animation-delay: 0.25s; }
+  .animate-delay-600 { animation-delay: 0.3s; }
 `;
 
 const Landing = () => {
