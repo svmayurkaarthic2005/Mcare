@@ -568,7 +568,7 @@ const FeatureCard = ({ id, isVisible, icon, title, description }: { id: string; 
     <motion.div 
       id={id}
       initial={{ opacity: 0, y: 30 }}
-      animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+      animate={isVisible ? { opacity: 1, y: 0 } : undefined}
       transition={{ 
         duration: 0.6, 
         delay: cardIndex * 0.1,
