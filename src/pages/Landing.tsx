@@ -26,12 +26,12 @@ const animationStyles = `
     animation: fadeInSlideUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
   }
 
-  .animate-delay-100 { animation-delay: 0.05s; }
-  .animate-delay-200 { animation-delay: 0.1s; }
-  .animate-delay-300 { animation-delay: 0.15s; }
-  .animate-delay-400 { animation-delay: 0.2s; }
-  .animate-delay-500 { animation-delay: 0.25s; }
-  .animate-delay-600 { animation-delay: 0.3s; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+  .animate-delay-400 { animation-delay: 0.4s; }
+  .animate-delay-500 { animation-delay: 0.5s; }
+  .animate-delay-600 { animation-delay: 0.6s; }
 `;
 
 const Landing = () => {
@@ -571,16 +571,19 @@ const FeatureCard = ({ id, isVisible, icon, title, description }: { id: string; 
     <div 
       id={id}
       data-animate-card
-      className={`group p-8 rounded-lg bg-card border border-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
+      className={`group relative p-8 rounded-lg bg-card border border-border/50 hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 ${
         isVisible ? `animate-fade-in-slide-up ${delayClass}` : ''
       }`}
       style={!isVisible ? { opacity: 0, transform: 'translateY(30px)' } : undefined}
     >
-      <div className="inline-flex p-3 rounded-lg bg-primary/10 text-primary mb-4 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
-        {icon}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="relative space-y-3">
+        <div className="inline-flex p-3 rounded-lg bg-primary/10 text-primary mb-4 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
+          {icon}
+        </div>
+        <h3 className="text-xl font-semibold mb-3">{title}</h3>
+        <p className="text-muted-foreground leading-relaxed">{description}</p>
       </div>
-      <h3 className="text-xl font-semibold mb-3">{title}</h3>
-      <p className="text-muted-foreground leading-relaxed">{description}</p>
     </div>
   );
 };
