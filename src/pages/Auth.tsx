@@ -332,9 +332,53 @@ const Auth = () => {
         return;
       }
 
-      console.log("[Auth] User signed in, now updating metadata");
+      console.log("[Auth] User signed in, waiting for session to stabilize...");
 
-      // Now we have a session, update metadata
+      // Wait longer for session to be fully established and propagated
+      // This is critical for doctor signup where we immediately check auth
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Verify session is established
+      let sessionVerified = false;
+      let sessionRetries = 5;
+      let verifiedUser = null;
+
+      while (sessionRetries > 0 && !sessionVerified) {
+        const { data: { user: currentUser }, error: sessionError } = await supabase.auth.getUser();
+        if (sessionError) {
+          console.warn(`[Auth] Session verification attempt failed (${6 - sessionRetries}/5):`, sessionError);
+          if (sessionRetries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            sessionRetries--;
+          } else {
+            sessionRetries = 0;
+          }
+        } else if (currentUser) {
+          sessionVerified = true;
+          verifiedUser = currentUser;
+          console.log("[Auth] Session verified successfully for user:", currentUser.id);
+        } else {
+          if (sessionRetries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            sessionRetries--;
+          } else {
+            sessionRetries = 0;
+          }
+        }
+      }
+
+      if (!sessionVerified) {
+        console.error("[Auth] Session could not be verified after OTP");
+        toast.error("Session establishment failed. Please sign in again.");
+        setShowOTPDialog(false);
+        resetForm();
+        setLoading(false);
+        return;
+      }
+
+      console.log("[Auth] Now updating metadata");
+
+      // Now we have a verified session, update metadata
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           full_name: fullName.trim(),

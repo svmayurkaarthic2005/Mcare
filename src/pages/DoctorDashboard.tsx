@@ -126,7 +126,47 @@ const DoctorDashboard = ({ showChat = false }: DoctorDashboardProps) => {
   const checkAuth = async () => {
     try {
       console.log("[DoctorDashboard] Starting auth check...");
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      // Try to refresh session first (especially important after OTP signup)
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.warn("[DoctorDashboard] Session refresh warning:", refreshError);
+        // Don't fail on refresh warning, session might still be valid
+      } else {
+        console.log("[DoctorDashboard] Session refreshed successfully");
+      }
+
+      // Now get the user with retries
+      let user = null;
+      let authError = null;
+      let getRetries = 3;
+
+      while (getRetries > 0 && !user) {
+        const { data: { user: currentUser }, error: currentAuthError } = await supabase.auth.getUser();
+        
+        if (currentAuthError) {
+          console.warn(`[DoctorDashboard] Auth check attempt failed (${4 - getRetries}/3):`, currentAuthError);
+          authError = currentAuthError;
+          if (getRetries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            getRetries--;
+          } else {
+            getRetries = 0;
+          }
+        } else if (currentUser) {
+          user = currentUser;
+          authError = null;
+          console.log("[DoctorDashboard] User authenticated:", user.id);
+          getRetries = 0;
+        } else {
+          if (getRetries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            getRetries--;
+          } else {
+            getRetries = 0;
+          }
+        }
+      }
       
       if (authError || !user) {
         console.error("[DoctorDashboard] Auth error or no user found:", authError);
