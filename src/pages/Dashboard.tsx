@@ -4,6 +4,7 @@ import { Activity, Menu, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User, Session } from "@supabase/supabase-js";
+import { recoverUserRole } from "@/lib/role-recovery";
 import { useN8nChat } from "@/hooks/use-n8n-chat";
 import { ProfileDropdown } from "@/components/dashboard/ProfileDropdown";
 import Notifications from "@/components/dashboard/Notifications";
@@ -110,6 +111,19 @@ const Dashboard = ({ showChat = false }: DashboardProps) => {
           }
         }
 
+        // If role not found, try recovery
+        if (!roleData && !roleError) {
+          console.log("Role not found, attempting recovery...");
+          const recoveryResult = await recoverUserRole(currentSession.user.id);
+          if (recoveryResult.success && recoveryResult.role) {
+            roleData = { role: recoveryResult.role };
+            console.log("Role recovered successfully:", recoveryResult.role);
+          } else {
+            console.error("Role recovery failed:", recoveryResult.message);
+            roleError = new Error(recoveryResult.message);
+          }
+        }
+
         if (roleError && !roleData) {
           console.error("Error fetching user role:", roleError);
           toast.error("Could not verify user role.");
@@ -119,7 +133,7 @@ const Dashboard = ({ showChat = false }: DashboardProps) => {
         }
 
         if (!roleData) {
-          console.error("No role found for user after retries");
+          console.error("No role found for user after retries and recovery");
           toast.error("Account setup incomplete. Please refresh the page.");
           setLoading(false);
           await supabase.auth.signOut();

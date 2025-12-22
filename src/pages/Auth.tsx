@@ -389,6 +389,9 @@ const Auth = () => {
 
       console.log("[Auth] Profile created/updated successfully");
 
+      // Small delay to ensure session is fully propagated
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Assign role
       console.log("[Auth] Assigning role:", role, "to user:", userId);
       const { data: roleInsertData, error: roleError } = await supabase
@@ -398,11 +401,26 @@ const Auth = () => {
 
       console.log("[Auth] Role insert response:", { data: roleInsertData, error: roleError });
 
-      if (roleError && roleError.code !== '23505') {
+      // If role insert fails with permission denied, it might be an RLS issue
+      if (roleError) {
         console.error("Role assignment error:", roleError);
-        toast.error(`Failed to assign role: ${roleError.message}`);
-        setLoading(false);
-        return;
+        
+        // Check if it's an RLS/permission issue
+        if (roleError.message && (roleError.message.includes("policy") || roleError.message.includes("permission"))) {
+          console.warn("RLS policy blocking role insert, attempting with explicit session verification");
+          // Get fresh session to ensure permissions
+          const { data: { session: freshSession } } = await supabase.auth.getSession();
+          if (!freshSession) {
+            toast.error("Session lost. Please sign in again.");
+            setLoading(false);
+            return;
+          }
+        } else if (roleError.code !== '23505') {
+          // Only fail if it's not a duplicate key error
+          toast.error(`Failed to assign role: ${roleError.message}`);
+          setLoading(false);
+          return;
+        }
       }
 
       console.log("[Auth] Role assigned successfully:", role);
@@ -447,12 +465,38 @@ const Auth = () => {
       // Clear pending signup data
       sessionStorage.removeItem('pendingSignupData');
 
-      // Verify role was assigned
+      // Verify role was assigned (with retries in case of timing issues)
       console.log("[Auth] Verifying role was assigned for user:", userId);
-      const { data: roleVerify, error: roleVerifyError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
+      let roleVerify = null;
+      let roleVerifyError = null;
+      let verifyRetries = 3;
+
+      while (verifyRetries > 0 && !roleVerify) {
+        const response = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId);
+
+        if (response.error) {
+          roleVerifyError = response.error;
+          if (verifyRetries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            verifyRetries--;
+          } else {
+            verifyRetries = 0;
+          }
+        } else if (response.data && response.data.length > 0) {
+          roleVerify = response.data;
+          verifyRetries = 0;
+        } else {
+          if (verifyRetries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            verifyRetries--;
+          } else {
+            verifyRetries = 0;
+          }
+        }
+      }
 
       console.log("[Auth] Role verify response:", { data: roleVerify, error: roleVerifyError });
 
