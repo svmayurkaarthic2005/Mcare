@@ -134,8 +134,22 @@ export const OTPVerificationDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      // Only allow closing if the dialog is intentionally closed (not by accidental outside click)
+      // We prevent closing while in the middle of verification
+      if (!isOpen && !loading && !resendLoading) {
+        onClose?.();
+      }
+    }}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => {
+        // Prevent closing dialog by clicking/tapping outside on mobile or desktop
+        e.preventDefault();
+      }} onEscapeKeyDown={(e) => {
+        // Prevent closing dialog with ESC key unless not loading
+        if (loading || resendLoading) {
+          e.preventDefault();
+        }
+      }}>
         <DialogHeader>
           <DialogTitle>Verify Your Email</DialogTitle>
           <DialogDescription>
