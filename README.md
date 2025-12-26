@@ -56,27 +56,57 @@ The system centralizes appointments, emergency handling, prescriptions, and pati
 
 ---
 
-## 📁 Project Structure (Simplified)
+src/
+├── components/          # React components
+│   ├── auth/           # Authentication components
+│   ├── dashboard/      # Dashboard components
+│   ├── debug/          # Debug utilities
+│   ├── profile/        # Profile components
+│   └── ui/             # shadcn-ui components
+├── hooks/              # Custom React hooks
+├── integrations/       # External service integrations (Supabase)
+├── lib/                # Utility functions and helpers
+├── pages/              # Page components
+│   ├── Auth.tsx
+│   ├── Dashboard.tsx
+│   ├── DoctorDashboard.tsx
+│   ├── Landing.tsx
+│   └── Settings.tsx
+├── App.tsx             # Main app component
+└── main.tsx            # Entry point
 
-```
-mcare/
-│
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   ├── hooks/
-│   ├── utils/
-│   └── App.tsx
-│
-├── public/
-├── supabase/
-├── .env
-├── package.json
-└── README.md
-```
-
+supabase/
+├── migrations/         # Database migrations
+├── functions/          # Edge functions
+└── config.toml         # Supabase config
 ---
+
+🔐 Authentication
+Email/Password signup with OTP verification
+Role-based access control (Patient/Doctor)
+Session management via Supabase Auth
+Secure JWT tokens
+
+💾 Database Schema
+Key Tables
+users - User accounts with roles
+patients - Patient profiles and medical info
+doctors - Doctor profiles, specialization, availability
+appointments - Appointment bookings with consultation type (online/offline)
+emergency_bookings - Emergency consultation requests
+prescriptions - Medical prescriptions
+notifications - User notifications
+notification_preferences - User notification settings
+
+📱 Pages
+Landing - Public landing page
+Auth - Sign up / Login page
+Dashboard - Patient main interface
+Doctor Dashboard - Doctor interface
+Profile - User profile management
+Services - Available services
+Settings - App preferences
+About - About page
 
 ## 🧑‍💻 Getting Started
 
