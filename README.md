@@ -143,31 +143,6 @@ VITE_N8N_WEBHOOK_URL=your_webhook_url
 ```
 
 ---
-
-## 🚧 Upcoming Features
-
-* AI-based symptom analysis
-* Doctor availability prediction
-* Health analytics dashboard
-* Mobile app (React Native)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**.
-
 ---
 
 ## ⭐ Support
