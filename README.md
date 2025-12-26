@@ -141,12 +141,3 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_anon_key
 VITE_N8N_WEBHOOK_URL=your_webhook_url
 ```
-
----
----
-
-## ⭐ Support
-
-If you like this project, please ⭐ the repository and share it with others!
-
----
